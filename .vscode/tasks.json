@@ -8,7 +8,7 @@
                 "-fcolor-diagnostics",
                 "-fansi-escape-codes",
                 "-g",
-                "${fileDirname}/stm32.c",
+                "${fileDirname}/test_main.c",
                 "${fileDirname}/relay_curves.c",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}",

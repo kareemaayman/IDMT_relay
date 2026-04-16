@@ -1,5 +1,0 @@
----
-triple:          'arm64-apple-darwin'
-binary-path:     '/Users/kareemaayman/Desktop/IDMT_relay/c_firmware/stm32'
-relocations:     []
-...
