@@ -1,0 +1,18 @@
+// relay_curves.h
+#ifndef RELAY_CURVES_H
+#define RELAY_CURVES_H
+#include <stdint.h>
+
+typedef enum { IEC_SI, IEC_VI, IEC_EI, IEC_LTI } IEC_Curve;
+typedef enum { IEEE_MOD_INV, IEEE_VERY_INV, IEEE_EXT_INV } IEEE_Curve;
+
+/* ── Error / status codes ──────────────────────────────────────────── */
+#define RELAY_OK            0
+#define RELAY_ERR_NO_TRIP  -1   /* M <= 1.0 : relay will never trip */
+#define RELAY_ERR_NULL_PTR -2
+
+float calc_rms(const uint16_t *samples, int n, uint16_t dc_offset);
+float trip_time_iec(float M, float TMS, IEC_Curve curve);
+float trip_time_ieee(float M, float TDS, IEEE_Curve curve);
+
+#endif
