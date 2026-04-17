@@ -24,6 +24,7 @@
 #include "relay_curves.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,14 +51,41 @@ TIM_HandleTypeDef htim3;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-#define ADC_SAMPLES    64
-#define ADC_DC_OFFSET  2048
-#define COUNTS_TO_AMPS 0.00488f   /* calibrate later with clamp meter */
-#define I_PICKUP       5.0f       /* amps — your pickup threshold     */
-#define TMS_SETTING    0.5f       /* time multiplier setting          */
+
+/* ── ADC / sampling ───────────────────────────────── */
+#define ADC_SAMPLES     64
+#define ADC_DC_OFFSET   2048
+#define COUNTS_TO_AMPS  0.00488f
 
 uint16_t adc_buf[ADC_SAMPLES];
 volatile uint8_t sample_ready = 0;
+
+/* ── Relay settings (changed by user via UART) ────── */
+typedef enum { STD_IEC, STD_IEEE } Standard;
+
+Standard  user_standard  = STD_IEC;
+IEC_Curve  user_iec_curve = IEC_SI;
+IEEE_Curve user_ieee_curve = IEEE_MOD_INV;
+float     user_tms        = 0.5f;
+float     user_pickup     = 5.0f;   /* amps */
+
+/* ── UART receive ─────────────────────────────────── */
+uint8_t  rx_byte       = 0;
+uint8_t  rx_buf[32]    = {0};
+uint8_t  rx_index      = 0;
+volatile uint8_t rx_ready = 0;
+
+/* ── State machine ────────────────────────────────── */
+typedef enum {
+    MENU_MAIN,
+    MENU_STANDARD,
+    MENU_CURVE,
+    MENU_TMS,
+    MENU_PICKUP
+} MenuState;
+
+MenuState menu_state = MENU_MAIN;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -73,6 +101,69 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+void uart_print(const char *msg)
+{
+    HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 200);
+}
+
+void show_main_menu(void)
+{
+    char buf[320];
+    const char *std_str  = (user_standard == STD_IEC) ? "IEC" : "IEEE";
+    const char *curve_str;
+
+    if (user_standard == STD_IEC) {
+        const char *iec_names[] = {"SI","VI","EI","LTI"};
+        curve_str = iec_names[user_iec_curve];
+    } else {
+        const char *ieee_names[] = {"MOD_INV","VERY_INV","EXT_INV"};
+        curve_str = ieee_names[user_ieee_curve];
+    }
+
+    sprintf(buf,
+        "\r\n======= IDMT RELAY =======\r\n"
+        " Standard : %s\r\n"
+        " Curve    : %s\r\n"
+        " TMS/TDS  : %.2f\r\n"
+        " Pickup   : %.2f A\r\n"
+        "--------------------------\r\n"
+        " 1) Change standard\r\n"
+        " 2) Change curve\r\n"
+        " 3) Change TMS/TDS\r\n"
+        " 4) Change pickup current\r\n"
+        "==========================\r\n"
+        "Enter choice: ",
+        std_str, curve_str, user_tms, user_pickup);
+
+    uart_print(buf);
+}
+
+void show_standard_menu(void)
+{
+    uart_print("\r\nSelect standard:\r\n"
+               " 1) IEC 60255\r\n"
+               " 2) IEEE C37.112\r\n"
+               "Enter choice: ");
+}
+
+void show_curve_menu(void)
+{
+    if (user_standard == STD_IEC) {
+        uart_print("\r\nSelect IEC curve:\r\n"
+                   " 1) Standard Inverse  (SI)\r\n"
+                   " 2) Very Inverse      (VI)\r\n"
+                   " 3) Extremely Inverse (EI)\r\n"
+                   " 4) Long-Time Inverse (LTI)\r\n"
+                   "Enter choice: ");
+    } else {
+        uart_print("\r\nSelect IEEE curve:\r\n"
+                   " 1) Moderately Inverse\r\n"
+                   " 2) Very Inverse\r\n"
+                   " 3) Extremely Inverse\r\n"
+                   "Enter choice: ");
+    }
+}
 
 /* USER CODE END 0 */
 
@@ -112,37 +203,141 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buf, ADC_SAMPLES);
   HAL_TIM_Base_Start(&htim3);
+  HAL_UART_Receive_IT(&huart1, &rx_byte, 1);  /* start UART interrupt */
+  show_main_menu();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+      /* ── UART input handler ───────────────────────── */
+      if (rx_ready)
+      {
+          rx_ready = 0;
+          char c = (char)rx_buf[0];
+
+          /* echo character back so user sees what they typed */
+          HAL_UART_Transmit(&huart1, (uint8_t*)&c, 1, 50);
+
+          switch (menu_state)
+          {
+              case MENU_MAIN:
+                  switch (c) {
+                      case '1': menu_state = MENU_STANDARD; show_standard_menu(); break;
+                      case '2': menu_state = MENU_CURVE;    show_curve_menu();    break;
+                      case '3':
+                          menu_state = MENU_TMS;
+                          uart_print("\r\nEnter TMS (e.g. 0.50): ");
+                          rx_index = 0;
+                          break;
+                      case '4':
+                          menu_state = MENU_PICKUP;
+                          uart_print("\r\nEnter pickup amps (e.g. 5.00): ");
+                          rx_index = 0;
+                          break;
+                      default:
+                          show_main_menu();
+                          break;
+                  }
+                  break;
+
+              case MENU_STANDARD:
+                  if (c == '1')      { user_standard = STD_IEC;  uart_print("\r\nSet to IEC.");  }
+                  else if (c == '2') { user_standard = STD_IEEE; uart_print("\r\nSet to IEEE."); }
+                  menu_state = MENU_MAIN;
+                  show_main_menu();
+                  break;
+
+              case MENU_CURVE:
+                  if (user_standard == STD_IEC) {
+                      if      (c == '1') user_iec_curve = IEC_SI;
+                      else if (c == '2') user_iec_curve = IEC_VI;
+                      else if (c == '3') user_iec_curve = IEC_EI;
+                      else if (c == '4') user_iec_curve = IEC_LTI;
+                  } else {
+                      if      (c == '1') user_ieee_curve = IEEE_MOD_INV;
+                      else if (c == '2') user_ieee_curve = IEEE_VERY_INV;
+                      else if (c == '3') user_ieee_curve = IEEE_EXT_INV;
+                  }
+                  menu_state = MENU_MAIN;
+                  show_main_menu();
+                  break;
+
+              case MENU_TMS:
+                  /* collect chars until Enter */
+                  if (c == '\r' || c == '\n') {
+                      rx_buf[rx_index] = '\0';
+                      float val = atof((char*)rx_buf);
+                      if (val > 0.0f && val <= 10.0f) {
+                          user_tms = val;
+                          uart_print("\r\nTMS updated.");
+                      } else {
+                          uart_print("\r\nInvalid. Range: 0.01 - 10.0");
+                      }
+                      rx_index = 0;
+                      menu_state = MENU_MAIN;
+                      show_main_menu();
+                  } else {
+                      if (rx_index < 10) rx_buf[rx_index++] = c;
+                  }
+                  break;
+
+              case MENU_PICKUP:
+                  if (c == '\r' || c == '\n') {
+                      rx_buf[rx_index] = '\0';
+                      float val = atof((char*)rx_buf);
+                      if (val > 0.0f) {
+                          user_pickup = val;
+                          uart_print("\r\nPickup updated.");
+                      } else {
+                          uart_print("\r\nInvalid value.");
+                      }
+                      rx_index = 0;
+                      menu_state = MENU_MAIN;
+                      show_main_menu();
+                  } else {
+                      if (rx_index < 10) rx_buf[rx_index++] = c;
+                  }
+                  break;
+          }
+      }
+
+      /* ── ADC / trip logic ─────────────────────────── */
       if (sample_ready)
       {
           sample_ready = 0;
 
           float rms_counts = calc_rms(adc_buf, ADC_SAMPLES, ADC_DC_OFFSET);
           float I_fault    = rms_counts * COUNTS_TO_AMPS;
-          float M          = I_fault / I_PICKUP;
+          float M          = I_fault / user_pickup;
 
-          char msg[64];
+          char msg[80];
+
           if (M > 1.0f)
           {
-              float t_trip = trip_time_iec(M, TMS_SETTING, IEC_SI);
-              sprintf(msg, "M=%.2f  Ttrip=%.3fs\r\n", M, t_trip);
+              float t_trip;
+              if (user_standard == STD_IEC)
+                  t_trip = trip_time_iec(M, user_tms, user_iec_curve);
+              else
+                  t_trip = trip_time_ieee(M, user_tms, user_ieee_curve);
+
+              sprintf(msg, "FAULT  M=%.2f  Ttrip=%.3fs\r\n", M, t_trip);
+              HAL_GPIO_WritePin(RELAY_TRIP_GPIO_Port, RELAY_TRIP_Pin, GPIO_PIN_SET);
           }
           else
           {
-              sprintf(msg, "M=%.2f  No trip\r\n", M);
+              sprintf(msg, "OK     M=%.2f  No trip\r\n", M);
+              HAL_GPIO_WritePin(RELAY_TRIP_GPIO_Port, RELAY_TRIP_Pin, GPIO_PIN_RESET);
           }
 
           HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
       }
-    /* USER CODE END WHILE */
 
+    /* USER CODE END WHILE */
     /* USER CODE BEGIN 3 */
   }
+  /* USER CODE END 3 */
 }
 
 /**
@@ -339,6 +534,7 @@ static void MX_DMA_Init(void)
   */
 static void MX_GPIO_Init(void)
 {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
   /* USER CODE BEGIN MX_GPIO_Init_1 */
 
   /* USER CODE END MX_GPIO_Init_1 */
@@ -346,6 +542,17 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(RELAY_TRIP_GPIO_Port, RELAY_TRIP_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : RELAY_TRIP_Pin */
+  GPIO_InitStruct.Pin = RELAY_TRIP_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(RELAY_TRIP_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
@@ -353,13 +560,23 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
     if (hadc->Instance == ADC1)
-    {
         sample_ready = 1;
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == USART1)
+    {
+        rx_buf[0] = rx_byte;
+        rx_ready  = 1;
+        HAL_UART_Receive_IT(&huart1, &rx_byte, 1);  /* re-arm */
     }
 }
+
 /* USER CODE END 4 */
 
 /**
