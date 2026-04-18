@@ -56,6 +56,8 @@ UART_HandleTypeDef huart1;
 #define ADC_SAMPLES     64
 #define ADC_DC_OFFSET   2048
 #define COUNTS_TO_AMPS  0.00488f
+#define I_PICKUP_DEFAULT 5.0f
+#define TMS_DEFAULT      0.5f
 
 uint16_t adc_buf[ADC_SAMPLES];
 volatile uint8_t sample_ready = 0;
@@ -66,8 +68,8 @@ typedef enum { STD_IEC, STD_IEEE } Standard;
 Standard  user_standard  = STD_IEC;
 IEC_Curve  user_iec_curve = IEC_SI;
 IEEE_Curve user_ieee_curve = IEEE_MOD_INV;
-float     user_tms        = 0.5f;
-float     user_pickup     = 5.0f;   /* amps */
+float     user_tms        = TMS_DEFAULT;
+float     user_pickup     = I_PICKUP_DEFAULT;   /* amps */
 
 /* ── UART receive ─────────────────────────────────── */
 uint8_t  rx_byte       = 0;
@@ -85,6 +87,11 @@ typedef enum {
 } MenuState;
 
 MenuState menu_state = MENU_MAIN;
+
+typedef enum { RELAY_NORMAL, RELAY_FAULT_PENDING, RELAY_TRIPPED } RelayState;
+RelayState relay_state     = RELAY_NORMAL;
+uint32_t   fault_start_ms  = 0;   /* HAL_GetTick() when fault detected */
+float      trip_time_ms    = 0;   /* calculated trip time in ms        */
 
 /* USER CODE END PV */
 
@@ -245,6 +252,11 @@ int main(void)
               case MENU_STANDARD:
                   if (c == '1')      { user_standard = STD_IEC;  uart_print("\r\nSet to IEC.");  }
                   else if (c == '2') { user_standard = STD_IEEE; uart_print("\r\nSet to IEEE."); }
+                  else {
+					  uart_print("\r\nInvalid. Enter 1 or 2.");
+					  show_standard_menu();
+					  break;
+				  }
                   menu_state = MENU_MAIN;
                   show_main_menu();
                   break;
@@ -255,10 +267,20 @@ int main(void)
                       else if (c == '2') user_iec_curve = IEC_VI;
                       else if (c == '3') user_iec_curve = IEC_EI;
                       else if (c == '4') user_iec_curve = IEC_LTI;
+                      else {
+                    	  uart_print("\r\nInvalid. Enter 1-4.");
+						  show_curve_menu();   /* reprint without going back to main */
+						  break;
+					  }
                   } else {
                       if      (c == '1') user_ieee_curve = IEEE_MOD_INV;
                       else if (c == '2') user_ieee_curve = IEEE_VERY_INV;
                       else if (c == '3') user_ieee_curve = IEEE_EXT_INV;
+                      else {
+						  uart_print("\r\nInvalid. Enter 1-3.");
+						  show_curve_menu();
+						  break;
+                      }
                   }
                   menu_state = MENU_MAIN;
                   show_main_menu();
@@ -312,7 +334,7 @@ int main(void)
           float I_fault    = rms_counts * COUNTS_TO_AMPS;
           float M          = I_fault / user_pickup;
 
-          char msg[80];
+          char msg[96];
 
           if (M > 1.0f)
           {
@@ -321,18 +343,65 @@ int main(void)
                   t_trip = trip_time_iec(M, user_tms, user_iec_curve);
               else
                   t_trip = trip_time_ieee(M, user_tms, user_ieee_curve);
+              switch (relay_state)
+              {
+              	  case RELAY_NORMAL:
+              		  /* ── NEW FAULT DETECTED ── */
+                      relay_state    = RELAY_FAULT_PENDING;
+                      fault_start_ms = HAL_GetTick();
+                      trip_time_ms   = t_trip * 1000.0f;
 
-              sprintf(msg, "FAULT  M=%.2f  Ttrip=%.3fs\r\n", M, t_trip);
-              HAL_GPIO_WritePin(RELAY_TRIP_GPIO_Port, RELAY_TRIP_Pin, GPIO_PIN_SET);
-          }
-          else
-          {
-              sprintf(msg, "OK     M=%.2f  No trip\r\n", M);
-              HAL_GPIO_WritePin(RELAY_TRIP_GPIO_Port, RELAY_TRIP_Pin, GPIO_PIN_RESET);
-          }
+					  /* T1 timestamp — GUI logs this */
+					  sprintf(msg, "FAULT_START M=%.2f Ttrip_theory=%.3fs\r\n",
+							  M, t_trip);
+					  HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+					  break;
+              	  case RELAY_FAULT_PENDING:
+					  /* ── CHECK IF TRIP TIME ELAPSED ── */
+					  if ((HAL_GetTick() - fault_start_ms) >= (uint32_t)trip_time_ms)
+					  {
+						  relay_state = RELAY_TRIPPED;
 
-          HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
-      }
+						  /* T2 timestamp — GUI calculates actual = T2 - T1 */
+						  HAL_GPIO_WritePin(RELAY_TRIP_GPIO_Port,
+											RELAY_TRIP_Pin, GPIO_PIN_SET);
+						  uart_print("TRIP_EXECUTED\r\n");
+					  }
+					  else
+					  {
+						  /* still counting — report progress */
+						  uint32_t elapsed_ms = HAL_GetTick() - fault_start_ms;
+						  float remaining = (trip_time_ms - elapsed_ms) / 1000.0f;
+						  sprintf(msg, "FAULT M=%.2f Tremain=%.3fs\r\n",
+								  M, remaining);
+						  HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+					  }
+					  break;
+
+				  case RELAY_TRIPPED:
+					  /* already tripped — just report */
+					  sprintf(msg, "TRIPPED M=%.2f\r\n", M);
+					  HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+					  break;
+			  }
+		  }
+		  else
+		  {
+			  /* ── FAULT CLEARED ── */
+			  if (relay_state != RELAY_NORMAL)
+			  {
+				  relay_state = RELAY_NORMAL;
+				  HAL_GPIO_WritePin(RELAY_TRIP_GPIO_Port,
+									RELAY_TRIP_Pin, GPIO_PIN_RESET);
+				  uart_print("FAULT_CLEARED\r\n");
+			  }
+			  else
+			  {
+				  sprintf(msg, "OK M=%.2f\r\n", M);
+				  HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+			  }
+		  }
+	  }
 
     /* USER CODE END WHILE */
     /* USER CODE BEGIN 3 */
