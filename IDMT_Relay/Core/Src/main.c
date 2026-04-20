@@ -58,6 +58,7 @@ UART_HandleTypeDef huart1;
 #define COUNTS_TO_AMPS  0.00488f
 #define I_PICKUP_DEFAULT 5.0f
 #define TMS_DEFAULT      0.5f
+#define INST_M_MIN       1.01f
 
 uint16_t adc_buf[ADC_SAMPLES];
 volatile uint8_t sample_ready = 0;
@@ -70,6 +71,7 @@ IEC_Curve  user_iec_curve = IEC_SI;
 IEEE_Curve user_ieee_curve = IEEE_MOD_INV;
 float     user_tms        = TMS_DEFAULT;
 float     user_pickup     = I_PICKUP_DEFAULT;   /* amps */
+float     user_inst_multiple = INST_MULTIPLE_DEFAULT;
 
 /* ── UART receive ─────────────────────────────────── */
 uint8_t  rx_byte       = 0;
@@ -83,7 +85,8 @@ typedef enum {
     MENU_STANDARD,
     MENU_CURVE,
     MENU_TMS,
-    MENU_PICKUP
+    MENU_PICKUP,
+    MENU_INST_MULTIPLE
 } MenuState;
 
 MenuState menu_state = MENU_MAIN;
@@ -134,14 +137,16 @@ void show_main_menu(void)
         " Curve    : %s\r\n"
         " TMS/TDS  : %.2f\r\n"
         " Pickup   : %.2f A\r\n"
+        " Inst M   : %.2f\r\n"
         "--------------------------\r\n"
         " 1) Change standard\r\n"
         " 2) Change curve\r\n"
         " 3) Change TMS/TDS\r\n"
         " 4) Change pickup current\r\n"
+        " 5) Change instant trip M\r\n"
         "==========================\r\n"
         "Enter choice: ",
-        std_str, curve_str, user_tms, user_pickup);
+        std_str, curve_str, user_tms, user_pickup, user_inst_multiple);
 
     uart_print(buf);
 }
@@ -243,6 +248,11 @@ int main(void)
                           uart_print("\r\nEnter pickup amps (e.g. 5.00): ");
                           rx_index = 0;
                           break;
+                      case '5':
+                          menu_state = MENU_INST_MULTIPLE;
+                          uart_print("\r\nEnter instant trip M (e.g. 10.00): ");
+                          rx_index = 0;
+                          break;
                       default:
                           show_main_menu();
                           break;
@@ -322,6 +332,24 @@ int main(void)
                       if (rx_index < 10) rx_buf[rx_index++] = c;
                   }
                   break;
+
+              case MENU_INST_MULTIPLE:
+                  if (c == '\r' || c == '\n') {
+                      rx_buf[rx_index] = '\0';
+                      float val = atof((char*)rx_buf);
+                      if (val >= INST_M_MIN) {
+                          user_inst_multiple = val;
+                          uart_print("\r\nInstant trip M updated.");
+                      } else {
+                          uart_print("\r\nInvalid. Range: 1.01 and above");
+                      }
+                      rx_index = 0;
+                      menu_state = MENU_MAIN;
+                      show_main_menu();
+                  } else {
+                      if (rx_index < 10) rx_buf[rx_index++] = c;
+                  }
+                  break;
           }
       }
 
@@ -340,9 +368,9 @@ int main(void)
           {
               float t_trip;
               if (user_standard == STD_IEC)
-                  t_trip = trip_time_iec(M, user_tms, user_iec_curve);
+                  t_trip = trip_time_iec(M, user_tms, user_inst_multiple, user_iec_curve);
               else
-                  t_trip = trip_time_ieee(M, user_tms, user_ieee_curve);
+                  t_trip = trip_time_ieee(M, user_tms, user_inst_multiple, user_ieee_curve);
               switch (relay_state)
               {
               	  case RELAY_NORMAL:
