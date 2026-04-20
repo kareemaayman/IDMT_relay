@@ -12,10 +12,13 @@ static const IEC_Params IEC_TABLE[4] = {
     /* IEC_LTI */  { 120.0f, 1.00f }
 };
 
-float trip_time_iec(float M, float TMS, IEC_Curve curve)
+float trip_time_iec(float M, float TMS, float inst_multiple, IEC_Curve curve)
 {
     if (M <= 1.0f) {
         return (float)RELAY_ERR_NO_TRIP;   /* relay does not trip below pickup */
+    }
+    else if (M >= inst_multiple) {
+        return RELAY_INST_ZONE;              /* instantaneous trip zone */
     }
 
     const IEC_Params *p = &IEC_TABLE[curve];
@@ -33,10 +36,13 @@ static const IEEE_Params IEEE_TABLE[3] = {
     /* IEEE_EXT_INV  */  { 28.2f,   0.1217f, 2.00f }
 };
 
-float trip_time_ieee(float M, float TDS, IEEE_Curve curve)
+float trip_time_ieee(float M, float TDS, float inst_multiple, IEEE_Curve curve)
 {
     if (M <= 1.0f) {
         return (float)RELAY_ERR_NO_TRIP;
+    }
+    else if (M >= inst_multiple) {
+        return RELAY_INST_ZONE;              /* instantaneous trip zone */
     }
 
     const IEEE_Params *p = &IEEE_TABLE[curve];
@@ -44,17 +50,6 @@ float trip_time_ieee(float M, float TDS, IEEE_Curve curve)
     float denom = powf(M, p->p) - 1.0f;
     return TDS * ((p->A / denom) + p->B);
 }
-
-// float trip_time(float I_rms, float Ip, float TD, CurveType curve)
-// {
-//     float M = I_rms / Ip;
-
-//     if (curve <= IEC_LONG)
-//         return trip_time_iec(M, TD, curve);
-
-//     else
-//         return trip_time_ieee(M, TD, curve);
-// }
 
 /* ══════════════════════════════════════════════════════════════════════
  *  calc_rms()

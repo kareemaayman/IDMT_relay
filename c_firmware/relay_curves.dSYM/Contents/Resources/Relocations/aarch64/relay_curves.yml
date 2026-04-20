@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/kareemaayman/Desktop/IDMT_relay/c_firmware/relay_curves'
+relocations:     []
+...

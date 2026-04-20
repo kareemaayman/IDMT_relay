@@ -9,8 +9,11 @@ print(f"Standard Inverse  M=2  TMS=1 → {t:.3f}s   (expected ~10.03s)")
 t = trip_time(2.0, 1.0, 1.0, "very_inverse")
 print(f"Very Inverse      M=2  TMS=1 → {t:.3f}s   (expected ~13.5s)")
 
-t = trip_time(10.0, 1.0, 1.0, "extremely_inverse")
-print(f"Extremely Inverse M=10 TMS=1 → {t:.3f}s (expected ~0.808s)")
+t = trip_time(9.0, 1.0, 1.0, "extremely_inverse")
+print(f"Extremely Inverse M=9 TMS=1 → {t:.3f}s (expected ~1.000s)")
+
+t = trip_time(11.0, 1.0, 1.0, "extremely_inverse")
+print(f"Extremely Inverse M=11 (instantaneous trip) TMS=1 → {t:.3f}s (expected ~0.020s)")
 
 print("\n=== IEEE curve checks ===")
 

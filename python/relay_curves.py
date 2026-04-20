@@ -1,5 +1,9 @@
 import math
 
+# ─── Constants ──────────────────────────────────────────────────────────────
+DEFAULT_INST_MULT    = 10.0   # Instantaneous zone: M >= this → instant trip
+INST_TRIP_TIME_S     = 0.020  # "Instant" = 1 cycle (20ms), not true zero
+
 # IEC 60255 — t = TMS * k / (M^alpha - 1)
 IEC_CURVES = {
     "standard_inverse":   {"k": 0.14,  "alpha": 0.02},
@@ -20,6 +24,8 @@ def trip_time_iec(I_rms, Ip, TMS, curve="standard_inverse"):
     M = I_rms / Ip
     if M <= 1.0:
         return float('inf')
+    elif M >= DEFAULT_INST_MULT:
+        return INST_TRIP_TIME_S
     return TMS * c["k"] / (M ** c["alpha"] - 1.0)
 
 def trip_time_ieee(I_rms, Ip, TDS, curve="ieee_moderately_inverse"):
@@ -27,6 +33,8 @@ def trip_time_ieee(I_rms, Ip, TDS, curve="ieee_moderately_inverse"):
     M = I_rms / Ip
     if M <= 1.0:
         return float('inf')
+    elif M >= DEFAULT_INST_MULT:
+        return INST_TRIP_TIME_S
     return TDS * (c["A"] / (M ** c["p"] - 1.0) + c["B"])  # note the + B
 
 def trip_time(I_rms, Ip, TD, curve):

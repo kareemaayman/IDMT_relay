@@ -79,20 +79,51 @@ static void test_iec(void)
      * IEC EI:   80.0 / (2^2.0   - 1) = 80.0 / 3.0        ≈ 26.67 s
      * IEC LTI: 120.0 / (2^1.0   - 1) = 120.0 / 1.0       = 120.0 s
      */
-    check("IEC SI  M=2 TMS=1  (~10.03s)", trip_time_iec(2.0f, 1.0f, IEC_SI),   10.03f, 0.05f);
-    check("IEC VI  M=2 TMS=1  (13.50s)", trip_time_iec(2.0f, 1.0f, IEC_VI),   13.50f, 0.05f);
-    check("IEC EI  M=2 TMS=1  (26.67s)", trip_time_iec(2.0f, 1.0f, IEC_EI),   26.67f, 0.05f);
-    check("IEC LTI M=2 TMS=1  (120.0s)", trip_time_iec(2.0f, 1.0f, IEC_LTI), 120.00f, 0.10f);
+    check("IEC SI  M=2 TMS=1  (~10.03s)", trip_time_iec(2.0f, 1.0f, INST_MULTIPLE_DEFAULT, IEC_SI),   10.03f, 0.05f);
+    check("IEC VI  M=2 TMS=1  (13.50s)", trip_time_iec(2.0f, 1.0f, INST_MULTIPLE_DEFAULT, IEC_VI),   13.50f, 0.05f);
+    check("IEC EI  M=2 TMS=1  (26.67s)", trip_time_iec(2.0f, 1.0f, INST_MULTIPLE_DEFAULT, IEC_EI),   26.67f, 0.05f);
+    check("IEC LTI M=2 TMS=1  (120.0s)", trip_time_iec(2.0f, 1.0f, INST_MULTIPLE_DEFAULT, IEC_LTI), 120.00f, 0.10f);
 
     /* TMS scaling: halving TMS must halve the trip time */
-    float t_full = trip_time_iec(5.0f, 1.0f, IEC_SI);
-    float t_half = trip_time_iec(5.0f, 0.5f, IEC_SI);
+    float t_full = trip_time_iec(5.0f, 1.0f, INST_MULTIPLE_DEFAULT, IEC_SI);
+    float t_half = trip_time_iec(5.0f, 0.5f, INST_MULTIPLE_DEFAULT, IEC_SI);
     check("IEC SI  TMS halving scales time", t_half, t_full * 0.5f, 0.001f);
 
     /* M <= 1.0 must return error */
-    float err = trip_time_iec(0.8f, 1.0f, IEC_SI);
+    float err = trip_time_iec(0.8f, 1.0f, INST_MULTIPLE_DEFAULT, IEC_SI);
     check("IEC SI  M<1 returns RELAY_ERR_NO_TRIP", err, (float)RELAY_ERR_NO_TRIP, 0.001f);
 }
+/* ── Instantaneous zone tests ──────────────────────────────────────── */
+static void test_instantaneous(void)
+{
+    printf("\n=== Instantaneous Zone Tests ===\n");
+
+    /* M exactly at threshold → must return INST_TRIP_TIME_S */
+    float t = trip_time_iec(10.0f, 1.0f, INST_MULTIPLE_DEFAULT, IEC_SI);
+    check("Inst zone M=10.0 (expect 0.020s)", t, INST_TRIP_TIME_S, 0.001f);
+
+    /* M well above threshold */
+    t = trip_time_iec(25.0f, 1.0f, INST_MULTIPLE_DEFAULT, IEC_SI);
+    check("Inst zone M=25.0 (expect 0.020s)", t, INST_TRIP_TIME_S, 0.001f);
+
+    /* IEEE curve also hits inst zone */
+    t = trip_time_ieee(15.0f, 1.0f, INST_MULTIPLE_DEFAULT, IEEE_MOD_INV);
+    check("Inst zone IEEE M=15 (expect 0.020s)", t, INST_TRIP_TIME_S, 0.001f);
+
+    /* M just below threshold → must NOT be inst zone (should give IDMT time) */
+    t = trip_time_iec(9.99f, 1.0f, INST_MULTIPLE_DEFAULT, IEC_SI);
+    int not_inst = (fabsf(t - INST_TRIP_TIME_S) > 0.01f) && (t > 0.0f);
+    tests_run++;
+    if (not_inst) {
+        printf("  [PASS] %-40s  got=%.4f\n",
+               "M=9.99 stays in IDMT zone", t);
+        tests_passed++;
+    } else {
+        printf("  [FAIL] %-40s  got=%.4f (should be IDMT time, not 0.020)\n",
+               "M=9.99 stays in IDMT zone", t);
+    }
+}
+
 
 /* ── IEEE curve tests ──────────────────────────────────────────────── */
 static void test_ieee(void)
@@ -115,17 +146,17 @@ static void test_ieee(void)
      *   denom = 3.0
      *   t = 1.0 * (28.2/3 + 0.1217) = 9.400 + 0.1217 = 9.522 s
      */
-    check("IEEE MOD_INV  M=2 TDS=1  (~3.80s)", trip_time_ieee(2.0f, 1.0f, IEEE_MOD_INV),  3.804f, 0.05f);
-    check("IEEE VERY_INV M=2 TDS=1  (~7.03s)", trip_time_ieee(2.0f, 1.0f, IEEE_VERY_INV), 7.028f, 0.05f);
-    check("IEEE EXT_INV  M=2 TDS=1  (~9.52s)", trip_time_ieee(2.0f, 1.0f, IEEE_EXT_INV),  9.522f, 0.05f);
+    check("IEEE MOD_INV  M=2 TDS=1  (~3.80s)", trip_time_ieee(2.0f, 1.0f, INST_MULTIPLE_DEFAULT, IEEE_MOD_INV),  3.804f, 0.05f);
+    check("IEEE VERY_INV M=2 TDS=1  (~7.03s)", trip_time_ieee(2.0f, 1.0f, INST_MULTIPLE_DEFAULT, IEEE_VERY_INV), 7.028f, 0.05f);
+    check("IEEE EXT_INV  M=2 TDS=1  (~9.52s)", trip_time_ieee(2.0f, 1.0f, INST_MULTIPLE_DEFAULT, IEEE_EXT_INV),  9.522f, 0.05f);
 
     /* TDS scaling */
-    float t1 = trip_time_ieee(5.0f, 1.0f, IEEE_VERY_INV);
-    float t2 = trip_time_ieee(5.0f, 2.0f, IEEE_VERY_INV);
+    float t1 = trip_time_ieee(5.0f, 1.0f, INST_MULTIPLE_DEFAULT, IEEE_VERY_INV);
+    float t2 = trip_time_ieee(5.0f, 2.0f, INST_MULTIPLE_DEFAULT, IEEE_VERY_INV);
     check("IEEE VERY_INV TDS doubling scales time", t2, t1 * 2.0f, 0.001f);
 
-    /* M <= 1.0 guard */
-    float err = trip_time_ieee(1.0f, 1.0f, IEEE_MOD_INV);
+    /* M <= 1.0 must return error */
+    float err = trip_time_ieee(1.0f, 1.0f, INST_MULTIPLE_DEFAULT, IEEE_MOD_INV);
     check("IEEE MOD_INV  M=1 returns RELAY_ERR_NO_TRIP", err, (float)RELAY_ERR_NO_TRIP, 0.001f);
 }
 
@@ -148,6 +179,7 @@ int main(void)
     test_rms();
     test_iec();
     test_ieee();
+    test_instantaneous();
     print_summary();
     return (tests_passed == tests_run) ? 0 : 1;
 }

@@ -8,7 +8,7 @@ TMS = 1.0
 curve = "standard_inverse"
 
 # Fault level (change this to test)
-M_target = 10
+M_target = 20
 I_fault = M_target * Ip
 
 # ===== SIGNAL =====
@@ -41,6 +41,7 @@ for i in range(window, len(signal)):
             trip = True
             break
     else:
+        
         time_acc = 0
         
 print(f"M_actual = {M:.2f}")

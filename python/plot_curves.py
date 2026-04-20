@@ -2,7 +2,7 @@ from relay_curves import trip_time, IEC_CURVES, IEEE_CURVES  # ← same library
 import matplotlib.pyplot as plt
 import numpy as np
 
-M_values = np.linspace(1.05, 20, 500)
+M_values = np.logspace(0, 2, 500)   # 1 → 100
 
 fig1, ax1 = plt.subplots(figsize=(10, 6))
 
