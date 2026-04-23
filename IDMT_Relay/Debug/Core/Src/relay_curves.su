@@ -1,3 +1,3 @@
 ../Core/Src/relay_curves.c:15:7:trip_time_iec	32	static
-../Core/Src/relay_curves.c:36:7:trip_time_ieee	32	static
-../Core/Src/relay_curves.c:62:7:calc_rms	48	static
+../Core/Src/relay_curves.c:39:7:trip_time_ieee	32	static
+../Core/Src/relay_curves.c:57:7:calc_rms	48	static

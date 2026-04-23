@@ -380,8 +380,8 @@ int main(void)
                       trip_time_ms   = t_trip * 1000.0f;
 
 					  /* T1 timestamp — GUI logs this */
-					  sprintf(msg, "FAULT_START M=%.2f Ttrip_theory=%.3fs\r\n",
-							  M, t_trip);
+                      sprintf(msg, "FAULT_START t=%.3f M=%.2f Ttrip_theory=%.3fs\r\n",
+                              HAL_GetTick()/1000.0f, M, t_trip);
 					  HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
 					  break;
               	  case RELAY_FAULT_PENDING:
@@ -400,15 +400,16 @@ int main(void)
 						  /* still counting — report progress */
 						  uint32_t elapsed_ms = HAL_GetTick() - fault_start_ms;
 						  float remaining = (trip_time_ms - elapsed_ms) / 1000.0f;
-						  sprintf(msg, "FAULT M=%.2f Tremain=%.3fs\r\n",
-								  M, remaining);
+						  // FAULT countdown
+						  sprintf(msg, "FAULT t=%.3f M=%.2f Tremain=%.3fs\r\n",
+						          HAL_GetTick()/1000.0f, M, remaining);
 						  HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
 					  }
 					  break;
 
 				  case RELAY_TRIPPED:
 					  /* already tripped — just report */
-					  sprintf(msg, "TRIPPED M=%.2f\r\n", M);
+					  sprintf(msg, "TRIPPED t=%.3f M=%.2f\r\n", HAL_GetTick()/1000.0f, M);
 					  HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
 					  break;
 			  }
@@ -425,7 +426,7 @@ int main(void)
 			  }
 			  else
 			  {
-				  sprintf(msg, "OK M=%.2f\r\n", M);
+				  sprintf(msg, "OK t=%.3f M=%.2f\r\n", HAL_GetTick()/1000.0f, M);
 				  HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
 			  }
 		  }
