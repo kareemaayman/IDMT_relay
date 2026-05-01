@@ -9,7 +9,7 @@
  *   - Sampling : analogRead() loop          (was DMA + TIM3 trigger)
  *   - Timing   : millis()                   (was HAL_GetTick())
  *   - Serial   : Serial (USB / UART0)       (was USART1 + HAL interrupt)
- *   - Trip pin : pin 7, active HIGH         (was RELAY_TRIP_Pin via HAL_GPIO)
+ *   - Trip pin : pin 7, active LOW          (was RELAY_TRIP_Pin via HAL_GPIO)
  *
  * Wiring:
  *   CT secondary → signal-conditioning circuit → A0 (analogue input)
@@ -43,7 +43,7 @@ float sensitivity = 0.85;
 /* ═══════════════════════════════════════════════════════════════
  *  Default relay settings
  * ═══════════════════════════════════════════════════════════════ */
-#define I_PICKUP_DEFAULT  5.0f      /* amps                               */
+#define I_PICKUP_DEFAULT  0.5f      /* amps                               */
 #define TMS_DEFAULT       0.5f
 #define INST_M_MIN        1.01f     /* minimum allowed inst multiple      */
 
@@ -71,6 +71,7 @@ float      user_inst_multiple = INST_MULTIPLE_DEFAULT;
 RelayState relay_state    = RELAY_NORMAL;
 uint32_t   fault_start_ms = 0;
 float      trip_time_ms   = 0.0f;
+bool       protection_enabled = false;   /* protection starts only after user config */
 
 /* Instantiate the Menu Library */
 RelayMenu relayMenu(user_standard, user_iec_curve, user_ieee_curve, user_tms, user_pickup, user_inst_multiple);
@@ -90,7 +91,14 @@ void setup()
 {
     Serial.begin(115200);
     pinMode(TRIP_PIN, OUTPUT);
-    digitalWrite(TRIP_PIN, LOW);
+    digitalWrite(TRIP_PIN, HIGH);
+    
+    Serial.print(F("\r\n"));
+    Serial.print(F("═══════════════════════════════════════════\r\n"));
+    Serial.print(F("  IDMT PROTECTION RELAY - CONFIGURATION\r\n"));
+    Serial.print(F("═══════════════════════════════════════════\r\n"));
+    Serial.print(F("\r\nConfigure settings below, then press 'S' to START PROTECTION:\r\n\r\n"));
+    
     relayMenu.init();
 }
 
@@ -103,11 +111,24 @@ void loop()
     while (Serial.available()) {
         char c = (char)Serial.read();
         Serial.print(c);          /* echo back so user sees what they typed */
-        relayMenu.processInput(c);
+        
+        /* Check for START command */
+        if (!protection_enabled && (c == 'S' || c == 's')) {
+            protection_enabled = true;
+            Serial.print(F("\r\n\r\n"));
+            Serial.print(F("═══════════════════════════════════════════\r\n"));
+            Serial.print(F("  PROTECTION SYSTEM ACTIVE\r\n"));
+            Serial.print(F("═══════════════════════════════════════════\r\n"));
+            Serial.print(F("\r\n"));
+        } else {
+            relayMenu.processInput(c);
+        }
     }
 
     /* ── ADC sampling + protection logic ─────────────── */
-    run_protection();
+    if (protection_enabled) {
+        run_protection();
+    }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -141,7 +162,7 @@ void run_protection(void)
         if (M >= user_inst_multiple)
         {
             relay_state = RELAY_TRIPPED;
-            digitalWrite(TRIP_PIN, HIGH);
+            digitalWrite(TRIP_PIN, LOW);
             print_status_1f(F("INST_TRIP"), millis(), M);
             return;
         }
@@ -160,7 +181,7 @@ void run_protection(void)
                 if ((millis() - fault_start_ms) >= (uint32_t)trip_time_ms)
                 {
                     relay_state = RELAY_TRIPPED;
-                    digitalWrite(TRIP_PIN, HIGH);
+                    digitalWrite(TRIP_PIN, LOW);
                     Serial.print(F("TRIP_EXECUTED\r\n"));
                 }
                 else
@@ -182,7 +203,7 @@ void run_protection(void)
         if (relay_state != RELAY_NORMAL)
         {
             relay_state = RELAY_NORMAL;
-            digitalWrite(TRIP_PIN, LOW);
+            digitalWrite(TRIP_PIN, HIGH);
             Serial.print(F("FAULT_CLEARED\r\n"));
         }
         else
