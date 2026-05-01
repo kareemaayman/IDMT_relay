@@ -5,7 +5,8 @@
 
 RelayMenu::RelayMenu(Standard& std, IEC_Curve& iec, IEEE_Curve& ieee, float& tms, float& pickup, float& inst_m)
     : m_std(std), m_iec(iec), m_ieee(ieee), m_tms(tms), m_pickup(pickup), m_inst_m(inst_m),
-      m_state(MENU_MAIN), m_rx_index(0)
+      m_state(MENU_MAIN), m_rx_index(0), m_latched(false)
+
 {
     // Initialize rx buffer
     m_rx_buf[0] = '\0';
@@ -22,24 +23,11 @@ void RelayMenu::processInput(char c) {
             switch (c) {
                 case '1': m_state = MENU_STANDARD; show_standard_menu(); break;
                 case '2': m_state = MENU_CURVE;    show_curve_menu();    break;
-                case '3':
-                    m_state = MENU_TMS;
-                    Serial.print(F("\r\nEnter TMS (e.g. 0.50): "));
-                    m_rx_index = 0;
-                    break;
-                case '4':
-                    m_state = MENU_PICKUP;
-                    Serial.print(F("\r\nEnter pickup amps (e.g. 5.00): "));
-                    m_rx_index = 0;
-                    break;
-                case '5':
-                    m_state = MENU_INST_MULTIPLE;
-                    Serial.print(F("\r\nEnter instant trip M (e.g. 10.00): "));
-                    m_rx_index = 0;
-                    break;
-                default:
-                    show_main_menu();
-                    break;
+                case '3': m_state = MENU_TMS;      show_tms_menu();       break;
+                case '4': m_state = MENU_PICKUP;   show_pickup_menu(); break;
+                case '5': m_state = MENU_INST_MULTIPLE; show_inst_multiple_menu(); break;
+                case '6': m_state = MENU_RESET; show_reset_menu(); break;
+                default: show_main_menu(); break;
             }
             break;
 
@@ -73,6 +61,7 @@ void RelayMenu::processInput(char c) {
         /* ── TMS entry ──────────────────────────────────── */
         case MENU_TMS:
             if (c == '\r' || c == '\n') {
+                if (m_rx_index == 0) break;  /* ignore empty input */
                 m_rx_buf[m_rx_index] = '\0';
                 float val = atof(m_rx_buf);
                 if (val > 0.0f && val <= 10.0f) {
@@ -92,6 +81,7 @@ void RelayMenu::processInput(char c) {
         /* ── Pickup entry ───────────────────────────────── */
         case MENU_PICKUP:
             if (c == '\r' || c == '\n') {
+                if (m_rx_index == 0) break;  /* ignore empty input */
                 m_rx_buf[m_rx_index] = '\0';
                 float val = atof(m_rx_buf);
                 if (val > 0.0f) {
@@ -111,6 +101,7 @@ void RelayMenu::processInput(char c) {
         /* ── Instantaneous multiple entry ───────────────── */
         case MENU_INST_MULTIPLE:
             if (c == '\r' || c == '\n') {
+                if (m_rx_index == 0) break;  /* ignore empty input */
                 m_rx_buf[m_rx_index] = '\0';
                 float val = atof(m_rx_buf);
                 if (val >= INST_M_MIN) {
@@ -126,6 +117,20 @@ void RelayMenu::processInput(char c) {
                 if (m_rx_index < (int)(sizeof(m_rx_buf) - 1)) m_rx_buf[m_rx_index++] = c;
             }
             break;
+        /* ── Reset latch menu ───────────────────────────── */
+        case MENU_RESET:
+            if (c == 'Y' || c == 'y') {
+                m_latched = false;  /* reset the latch */
+                Serial.print(F("\r\nLatch reset. Relay can trip again."));
+            } else if (c == 'N' || c == 'n') {
+                Serial.print(F("\r\nLatch remains set. Relay will not trip."));
+            } else {
+                Serial.print(F("\r\nInvalid. Enter Y or N."));
+                break; 
+            }
+            m_state = MENU_MAIN;
+            show_main_menu();
+            break; 
     }
 }
 
@@ -160,6 +165,7 @@ void RelayMenu::show_main_menu() {
                    " 3) Change TMS/TDS\r\n"
                    " 4) Change pickup current\r\n"
                    " 5) Change instant trip M\r\n"
+                   " 6) Reset fault latch\r\n" 
                    "==========================\r\n"
                    "Enter choice: "));
 }
@@ -186,4 +192,17 @@ void RelayMenu::show_curve_menu() {
                      " 3) Extremely Inverse\r\n"
                      "Enter choice: "));
     }
+}
+void RelayMenu::show_tms_menu() {
+    Serial.print(F("\r\nEnter TMS (e.g. 0.50): "));
+}
+void RelayMenu::show_pickup_menu() {
+    Serial.print(F("\r\nEnter pickup amps (e.g. 5.00): "));
+}
+void RelayMenu::show_inst_multiple_menu() {
+    Serial.print(F("\r\nEnter instant trip M (e.g. 10.00): "));
+}
+void RelayMenu::show_reset_menu() {
+    Serial.print(F("\r\nRelay is latched open.\r\n"
+                   "Reset latch? (Y/N): "));
 }

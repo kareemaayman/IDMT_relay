@@ -66,6 +66,7 @@ IEEE_Curve user_ieee_curve   = IEEE_MOD_INV;
 float      user_tms          = TMS_DEFAULT;
 float      user_pickup       = I_PICKUP_DEFAULT;
 float      user_inst_multiple = INST_MULTIPLE_DEFAULT;
+static float trip_fraction = 0.0f; 
 
 /* Relay protection state machine */
 RelayState relay_state    = RELAY_NORMAL;
@@ -137,6 +138,11 @@ void loop()
  * ═══════════════════════════════════════════════════════════════ */
 void run_protection(void)
 {
+    /* If latched, hold relay open and wait for manual reset via menu */
+    if (relayMenu.m_latched) {
+        digitalWrite(TRIP_PIN, LOW);     // ensure it stays open
+        return;
+    }
     /* Collect one window of ADC samples */
     for (int i = 0; i < ADC_SAMPLES; i++) {
         adc_buf[i] = (uint16_t)analogRead(ADC_PIN);
@@ -148,6 +154,11 @@ void run_protection(void)
 
     float I_fault = Vrms * sensitivity;
     float M       = I_fault / user_pickup;
+    Serial.print(F("DEBUG: I="));
+    Serial.print(I_fault);
+    Serial.print(F(" M="));
+    Serial.print(M);
+    Serial.print(F("\r\n"));
 
     if (M > 1.0f)
     {
@@ -162,6 +173,7 @@ void run_protection(void)
         if (M >= user_inst_multiple)
         {
             relay_state = RELAY_TRIPPED;
+            relayMenu.m_latched = true; 
             digitalWrite(TRIP_PIN, LOW);
             print_status_1f(F("INST_TRIP"), millis(), M);
             return;
@@ -173,43 +185,59 @@ void run_protection(void)
                 /* New fault detected */
                 relay_state    = RELAY_FAULT_PENDING;
                 fault_start_ms = millis();
+                trip_fraction  = 0.0f; 
                 trip_time_ms   = t_trip * 1000.0f;
                 print_fault_start(millis(), M, t_trip);
                 break;
 
             case RELAY_FAULT_PENDING:
-                if ((millis() - fault_start_ms) >= (uint32_t)trip_time_ms)
-                {
+                float window_s = (float)ADC_SAMPLES * 200e-6f;  // one window ≈ 0.1 s
+                trip_fraction += window_s / t_trip;     
+                if (trip_fraction >= 1.0f){
                     relay_state = RELAY_TRIPPED;
+                    relayMenu.m_latched = true;
                     digitalWrite(TRIP_PIN, LOW);
                     Serial.print(F("TRIP_EXECUTED\r\n"));
                 }
                 else
                 {
-                    uint32_t elapsed_ms = millis() - fault_start_ms;
-                    float remaining = (trip_time_ms - (float)elapsed_ms) / 1000.0f;
-                    print_fault_pending(millis(), M, remaining);
+                    float remaining = (1.0f - trip_fraction) * t_trip;
+                    print_fault_pending(millis(), M, remaining, t_trip);
                 }
                 break;
+                // if ((millis() - fault_start_ms) >= (uint32_t)trip_time_ms)
+                // {
+                //     relay_state = RELAY_TRIPPED;
+                //     relayMenu.m_latched = true;
+                //     digitalWrite(TRIP_PIN, LOW);
+                //     Serial.print(F("TRIP_EXECUTED\r\n"));
+                // }
+                // else
+                // {
+                //     uint32_t elapsed_ms = millis() - fault_start_ms;
+                //     float remaining = (trip_time_ms - (float)elapsed_ms) / 1000.0f;
+                //     print_fault_pending(millis(), M, remaining);
+                // }
+                // break;
 
             case RELAY_TRIPPED:
                 print_status_1f(F("TRIPPED"), millis(), M);
                 break;
         }
     }
-    else
-    {
-        /* Fault cleared */
-        if (relay_state != RELAY_NORMAL)
-        {
-            relay_state = RELAY_NORMAL;
-            digitalWrite(TRIP_PIN, HIGH);
-            Serial.print(F("FAULT_CLEARED\r\n"));
-        }
-        else
-        {
-            print_status_1f(F("OK"), millis(), M);
-        }
+    else{
+            // Fault cleared — but only reclose if NOT latched
+            if (relay_state != RELAY_NORMAL && !relayMenu.m_latched)
+            {
+                relay_state = RELAY_NORMAL;
+                digitalWrite(TRIP_PIN, HIGH);
+                Serial.print(F("FAULT_CLEARED\r\n"));
+            }
+            else if (!relayMenu.m_latched)
+            {
+                print_status_1f(F("OK"), millis(), M);
+            }
+            // if latched: do nothing, relay stays open
     }
 }
 
@@ -234,7 +262,7 @@ static void print_fault_start(uint32_t t, float M, float t_trip)
     Serial.print(F("s\r\n"));
 }
 
-static void print_fault_pending(uint32_t t, float M, float remaining)
+static void print_fault_pending(uint32_t t, float M, float remaining, float t_trip)
 {
     Serial.print(F("FAULT t="));
     Serial.print(t);
@@ -242,5 +270,8 @@ static void print_fault_pending(uint32_t t, float M, float remaining)
     Serial.print(M, 2);
     Serial.print(F(" Tremain="));
     Serial.print(remaining, 3);
+    Serial.print(F("s\r\n"));
+    Serial.print(F("Ttrip_theory="));
+    Serial.print(t_trip, 3);
     Serial.print(F("s\r\n"));
 }

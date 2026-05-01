@@ -14,7 +14,8 @@ typedef enum {
     MENU_CURVE,
     MENU_TMS,
     MENU_PICKUP,
-    MENU_INST_MULTIPLE
+    MENU_INST_MULTIPLE,
+    MENU_RESET
 } MenuState;
 
 class RelayMenu {
@@ -27,11 +28,16 @@ public:
 
     // Call this in loop() with the character received from Serial
     void processInput(char c);
+    bool m_latched; /* set to true when an instantaneous trip occurs, to bypass pending logic */
 
 private:
     void show_main_menu();
     void show_standard_menu();
     void show_curve_menu();
+    void show_tms_menu();
+    void show_pickup_menu();
+    void show_inst_multiple_menu();
+    void show_reset_menu();
 
     // References to global configuration variables
     Standard&   m_std;

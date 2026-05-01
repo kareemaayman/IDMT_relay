@@ -5,7 +5,7 @@
 
 /* ── Instantaneous zone ─────────────────────────────────────────────────── */
 #define INST_TRIP_TIME_S       0.020f /* 1 cycle @ 50Hz — "definite zero"    */
-#define INST_MULTIPLE_DEFAULT  10.0f  /* Default M threshold for instant trip */
+#define INST_MULTIPLE_DEFAULT  4.0f  /* Default M threshold for instant trip */
 
 typedef enum { IEC_SI, IEC_VI, IEC_EI, IEC_LTI } IEC_Curve;
 typedef enum { IEEE_MOD_INV, IEEE_VERY_INV, IEEE_EXT_INV } IEEE_Curve;
