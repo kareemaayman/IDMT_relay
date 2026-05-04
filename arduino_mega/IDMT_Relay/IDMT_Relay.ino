@@ -28,6 +28,9 @@
  * ═══════════════════════════════════════════════════════════════ */
 #define ADC_PIN          A0
 #define TRIP_PIN         7          /* digital output → relay driver     */
+#define GREEN_LED_PIN    8
+#define YELLOW_LED_PIN   9
+#define RED_LED_PIN      10
 
 /*
  * Calibration parameters
@@ -73,6 +76,8 @@ RelayState relay_state    = RELAY_NORMAL;
 uint32_t   fault_start_ms = 0;
 float      trip_time_ms   = 0.0f;
 bool       protection_enabled = false;   /* protection starts only after user config */
+uint32_t   blink_counter  = 0;
+bool       red_led_on     = false;
 
 /* Instantiate the Menu Library */
 RelayMenu relayMenu(user_standard, user_iec_curve, user_ieee_curve, user_tms, user_pickup, user_inst_multiple);
@@ -81,9 +86,10 @@ RelayMenu relayMenu(user_standard, user_iec_curve, user_ieee_curve, user_tms, us
  *  Forward declarations
  * ═══════════════════════════════════════════════════════════════ */
 void run_protection(void);
+void update_leds(RelayState state);
 static void print_status_1f(const __FlashStringHelper *label, uint32_t t, float M);
 static void print_fault_start(uint32_t t, float M, float t_trip);
-static void print_fault_pending(uint32_t t, float M, float remaining);
+static void print_fault_pending(uint32_t t, float M, float remaining, float t_trip);
 
 /* ═══════════════════════════════════════════════════════════════
  *  setup()
@@ -92,7 +98,11 @@ void setup()
 {
     Serial.begin(115200);
     pinMode(TRIP_PIN, OUTPUT);
+    pinMode(GREEN_LED_PIN, OUTPUT);
+    pinMode(YELLOW_LED_PIN, OUTPUT);
+    pinMode(RED_LED_PIN, OUTPUT);
     digitalWrite(TRIP_PIN, HIGH);
+    update_leds(relay_state);
     
     Serial.print(F("\r\n"));
     Serial.print(F("═══════════════════════════════════════════\r\n"));
@@ -141,6 +151,7 @@ void run_protection(void)
     /* If latched, hold relay open and wait for manual reset via menu */
     if (relayMenu.m_latched) {
         digitalWrite(TRIP_PIN, LOW);     // ensure it stays open
+        update_leds(relay_state);
         return;
     }
     /* Collect one window of ADC samples */
@@ -176,6 +187,7 @@ void run_protection(void)
             relayMenu.m_latched = true; 
             digitalWrite(TRIP_PIN, LOW);
             print_status_1f(F("INST_TRIP"), millis(), M);
+            update_leds(relay_state);
             return;
         }
 
@@ -188,9 +200,11 @@ void run_protection(void)
                 trip_fraction  = 0.0f; 
                 trip_time_ms   = t_trip * 1000.0f;
                 print_fault_start(millis(), M, t_trip);
+                update_leds(relay_state);
                 break;
 
             case RELAY_FAULT_PENDING:
+            {
                 float window_s = (float)ADC_SAMPLES * 200e-6f;  // one window ≈ 0.1 s
                 trip_fraction += window_s / t_trip;     
                 if (trip_fraction >= 1.0f){
@@ -198,6 +212,7 @@ void run_protection(void)
                     relayMenu.m_latched = true;
                     digitalWrite(TRIP_PIN, LOW);
                     Serial.print(F("TRIP_EXECUTED\r\n"));
+                    update_leds(relay_state);
                 }
                 else
                 {
@@ -219,9 +234,11 @@ void run_protection(void)
                 //     print_fault_pending(millis(), M, remaining);
                 // }
                 // break;
+            }
 
             case RELAY_TRIPPED:
                 print_status_1f(F("TRIPPED"), millis(), M);
+                update_leds(relay_state);
                 break;
         }
     }
@@ -232,12 +249,46 @@ void run_protection(void)
                 relay_state = RELAY_NORMAL;
                 digitalWrite(TRIP_PIN, HIGH);
                 Serial.print(F("FAULT_CLEARED\r\n"));
+                update_leds(relay_state);
             }
             else if (!relayMenu.m_latched)
             {
                 print_status_1f(F("OK"), millis(), M);
+                update_leds(relay_state);
             }
             // if latched: do nothing, relay stays open
+    }
+}
+
+void update_leds(RelayState state)
+{
+    switch (state)
+    {
+        case RELAY_NORMAL:
+            red_led_on = false;
+            blink_counter = millis();
+            digitalWrite(GREEN_LED_PIN, HIGH);
+            digitalWrite(YELLOW_LED_PIN, LOW);
+            digitalWrite(RED_LED_PIN, LOW);
+            break;
+
+        case RELAY_FAULT_PENDING:
+            red_led_on = false;
+            blink_counter = millis();
+            digitalWrite(GREEN_LED_PIN, LOW);
+            digitalWrite(YELLOW_LED_PIN, HIGH);
+            digitalWrite(RED_LED_PIN, LOW);
+            break;
+
+        case RELAY_TRIPPED:
+            digitalWrite(GREEN_LED_PIN, LOW);
+            digitalWrite(YELLOW_LED_PIN, LOW);
+            if ((millis() - blink_counter) >= 500) {
+                blink_counter = millis();
+                red_led_on = !red_led_on;
+            }
+            digitalWrite(RED_LED_PIN, red_led_on ? HIGH : LOW);
+            break;
     }
 }
 
