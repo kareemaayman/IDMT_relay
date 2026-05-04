@@ -18,6 +18,9 @@ fault_start = []   # stores (t, M) of every FAULT_START
 plt.ion()
 fig, ax = plt.subplots()
 
+def parse_time_s(line):
+    return float(re.search(r't=([\d.]+)', line).group(1)) / 1000.0
+
 def redraw():
     ax.clear()
     ax.plot(t_data, i_data, color='blue', linewidth=1.5, label="M (x pickup)")
@@ -44,7 +47,7 @@ while True:
     try:
         # ── OK t=1.234 M=0.75 ─────────────────────────────
         if line.startswith("OK"):
-            t = float(re.search(r't=([\d.]+)', line).group(1))
+            t = parse_time_s(line)
             M = float(re.search(r'M=([\d.]+)', line).group(1))
             t_data.append(t)
             i_data.append(M)
@@ -52,7 +55,7 @@ while True:
 
         # ── FAULT_START t=1.234 M=2.10 Ttrip_theory=1.234s ─
         elif line.startswith("FAULT_START"):
-            t = float(re.search(r't=([\d.]+)', line).group(1))
+            t = parse_time_s(line)
             M = float(re.search(r'M=([\d.]+)', line).group(1))
             t_trip = re.search(r'Ttrip_theory=([\d.]+)', line).group(1)
             t_data.append(t)
@@ -63,7 +66,7 @@ while True:
 
         # ── FAULT M=2.10 Tremain=0.800s ────────────────────
         elif line.startswith("FAULT"):
-            t = float(re.search(r't=([\d.]+)', line).group(1))  # real time
+            t = parse_time_s(line)
             M = float(re.search(r'M=([\d.]+)', line).group(1))
             rem = re.search(r'Tremain=([\d.]+)', line).group(1)
             t_data.append(t)
@@ -85,9 +88,19 @@ while True:
             print(">> TRIPPED")
             redraw()
 
+        # ── INST_TRIP t=1.234 M=4.00 ───────────────────────
+        elif line.startswith("INST_TRIP"):
+            t = parse_time_s(line)
+            M = float(re.search(r'M=([\d.]+)', line).group(1))
+            t_data.append(t)
+            i_data.append(M)
+            trip_times.append((t, M))
+            print(">> INSTANT TRIP")
+            redraw()
+
         # ── TRIPPED M=2.10 (post-trip reports) ─────────────
         elif line.startswith("TRIPPED"):
-            t = float(re.search(r't=([\d.]+)', line).group(1))   # real time
+            t = parse_time_s(line)
             M = float(re.search(r'M=([\d.]+)', line).group(1))
             t_data.append(t)
             i_data.append(M)
