@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from collections import deque
 import re
 
-ser = serial.Serial('COM5', 115200)
+ser = serial.Serial('/dev/cu.usbmodem101', 115200)
 # Add this instead to use the simulator output:
 # import subprocess
 # import io

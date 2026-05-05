@@ -2,9 +2,10 @@ import customtkinter as ctk
 import serial
 import threading
 import time
+import re
 
 # ================= SERIAL CONFIG =================
-PORT = "tty.usbmodem-"   # change if needed
+PORT = "/dev/cu.usbmodem101"   # change if needed
 BAUD = 115200
 
 try:
@@ -25,6 +26,33 @@ def send(cmd):
         time.sleep(0.2)
     except Exception as e:
         textbox.insert("end", "\n[SEND ERROR]: {}\n".format(e))
+
+# ================= ACTUAL VALUE DISPLAY =================
+def set_actual_value(name, value):
+    actual_vars[name].set(value)
+
+def update_actual_values(data):
+    for raw_line in data.splitlines():
+        line = raw_line.strip()
+
+        if line.startswith("Standard"):
+            set_actual_value("standard", line.split(":", 1)[1].strip())
+        elif line.startswith("Curve"):
+            set_actual_value("curve", line.split(":", 1)[1].strip())
+        elif line.startswith("TMS/TDS"):
+            set_actual_value("tms", line.split(":", 1)[1].strip())
+        elif line.startswith("Pickup"):
+            set_actual_value("pickup", line.split(":", 1)[1].strip())
+        elif line.startswith("Inst M"):
+            set_actual_value("inst", line.split(":", 1)[1].strip())
+
+        current_match = re.search(r'\bI=([\d.]+)', line)
+        if current_match:
+            set_actual_value("current", current_match.group(1) + " A")
+
+        multiple_match = re.search(r'\bM=([\d.]+)', line)
+        if multiple_match:
+            set_actual_value("multiple", multiple_match.group(1) + " x pickup")
 
 # ================= APPLY SETTINGS =================
 def apply_settings():
@@ -68,7 +96,7 @@ def apply_settings():
         send('5')
         send(inst_entry.get() + '\r')
 
-        textbox.insert("end", "\n[SETTINGS SENT]\n")
+        textbox.insert("end", "\n[SETTINGS SENT - WAITING FOR RELAY SUMMARY]\n")
 
     except Exception as e:
         textbox.insert("end", "\n[ERROR]: {}\n".format(e))
@@ -95,6 +123,7 @@ def reset_fault():
 def update_text(data):
     textbox.insert("end", data)
     textbox.see("end")
+    update_actual_values(data)
     # Auto-update button states based on relay messages
     if "TRIP" in data or "LATCHED" in data:
         reset_btn.configure(state="normal")
@@ -130,7 +159,7 @@ ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 
 app = ctk.CTk()
-app.geometry("600x550")
+app.geometry("650x720")
 app.title("Relay Control GUI")
 
 # ---- TITLE ----
@@ -198,8 +227,59 @@ reset_btn.grid(row=0, column=1, padx=10)
 inst_entry = ctk.CTkEntry(app, placeholder_text="Instant Multiple")
 inst_entry.pack(pady=5)
 
+# ---- ACTUAL VALUES ----
+actual_vars = {
+    "standard": ctk.StringVar(value="--"),
+    "curve": ctk.StringVar(value="--"),
+    "tms": ctk.StringVar(value="--"),
+    "pickup": ctk.StringVar(value="--"),
+    "inst": ctk.StringVar(value="--"),
+    "current": ctk.StringVar(value="--"),
+    "multiple": ctk.StringVar(value="--"),
+}
+
+actual_frame = ctk.CTkFrame(app)
+actual_frame.pack(fill="x", padx=25, pady=10)
+
+actual_title = ctk.CTkLabel(
+    actual_frame,
+    text="Actual relay values",
+    font=("Segoe UI", 14, "bold")
+)
+actual_title.grid(row=0, column=0, columnspan=4, sticky="w", padx=12, pady=(10, 4))
+
+actual_items = [
+    ("Standard", "standard"),
+    ("Curve", "curve"),
+    ("TMS/TDS", "tms"),
+    ("Pickup", "pickup"),
+    ("Instant M", "inst"),
+    ("Current", "current"),
+    ("Multiple", "multiple"),
+]
+
+for index, (label, key) in enumerate(actual_items):
+    row = 1 + index // 2
+    column = (index % 2) * 2
+    ctk.CTkLabel(actual_frame, text=label + ":", anchor="w").grid(
+        row=row,
+        column=column,
+        sticky="w",
+        padx=(12, 4),
+        pady=3
+    )
+    ctk.CTkLabel(
+        actual_frame,
+        textvariable=actual_vars[key],
+        anchor="w",
+        font=("Segoe UI", 12, "bold")
+    ).grid(row=row, column=column + 1, sticky="w", padx=(0, 12), pady=3)
+
+actual_frame.grid_columnconfigure(1, weight=1)
+actual_frame.grid_columnconfigure(3, weight=1)
+
 # ---- TERMINAL OUTPUT ----
-textbox = ctk.CTkTextbox(app, width=550, height=300)
+textbox = ctk.CTkTextbox(app, width=600, height=260)
 textbox.pack(pady=10)
 
 # ---- START THREAD ----
