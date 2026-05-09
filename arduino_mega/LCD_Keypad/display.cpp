@@ -90,7 +90,7 @@ void LCDKeypadMenu::processInput(char c) {
                 m_rx_index = 0;
                 m_state = MENU_MAIN;
                 show_main_menu();
-            } else if (c >= '0' && c <= '9') {
+            } else if ((c >= '0' && c <= '9') || c == '.') {
                 if (m_rx_index < (int)(sizeof(m_rx_buf) - 1)) {
                     m_rx_buf[m_rx_index++] = c;
                     m_rx_buf[m_rx_index] = '\0';
@@ -116,7 +116,7 @@ void LCDKeypadMenu::processInput(char c) {
                 m_rx_index = 0;
                 m_state = MENU_MAIN;
                 show_main_menu();
-            } else if (c >= '0' && c <= '9') {
+            } else if ((c >= '0' && c <= '9') || c == '.') {
                 if (m_rx_index < (int)(sizeof(m_rx_buf) - 1)) {
                     m_rx_buf[m_rx_index++] = c;
                     m_rx_buf[m_rx_index] = '\0';
@@ -142,7 +142,7 @@ void LCDKeypadMenu::processInput(char c) {
                 m_rx_index = 0;
                 m_state = MENU_MAIN;
                 show_main_menu();
-            } else if (c >= '0' && c <= '9') {
+            } else if ((c >= '0' && c <= '9') || c == '.') {
                 if (m_rx_index < (int)(sizeof(m_rx_buf) - 1)) {
                     m_rx_buf[m_rx_index++] = c;
                     m_rx_buf[m_rx_index] = '\0';
@@ -236,12 +236,12 @@ void LCDKeypadMenu::show_curve_menu() {
 void LCDKeypadMenu::show_tms_menu() {
     m_lcd.clear();
     m_lcd.setCursor(0, 0);
-    m_lcd.print("Enter TMS (001-100)");
+    m_lcd.print("Enter TMS (0.01-10)");
     m_lcd.setCursor(0, 1);
     m_lcd.print("Current: ");
     m_lcd.print(m_tms, 2);
     m_lcd.setCursor(0, 2);
-    m_lcd.print("Use 0-9 only");
+    m_lcd.print("Use 0-9 and . ");
     m_lcd.setCursor(0, 3);
     m_lcd.print("Press * to OK");
 }
@@ -254,7 +254,7 @@ void LCDKeypadMenu::show_pickup_menu() {
     m_lcd.print("Current: ");
     m_lcd.print(m_pickup, 2);
     m_lcd.setCursor(0, 2);
-    m_lcd.print("Use 0-9 only");
+    m_lcd.print("Use 0-9 and . ");
     m_lcd.setCursor(0, 3);
     m_lcd.print("Press * to OK");
 }
@@ -262,12 +262,12 @@ void LCDKeypadMenu::show_pickup_menu() {
 void LCDKeypadMenu::show_inst_multiple_menu() {
     m_lcd.clear();
     m_lcd.setCursor(0, 0);
-    m_lcd.print("Enter Inst M (101+)");
+    m_lcd.print("Enter Inst M (>1.01)");
     m_lcd.setCursor(0, 1);
     m_lcd.print("Current: ");
     m_lcd.print(m_inst_m, 2);
     m_lcd.setCursor(0, 2);
-    m_lcd.print("Use 0-9 only");
+    m_lcd.print("Use 0-9 and . ");
     m_lcd.setCursor(0, 3);
     m_lcd.print("Press * to OK");
 }
