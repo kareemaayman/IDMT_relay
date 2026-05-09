@@ -57,8 +57,3 @@ def calc_rms(samples, dc_offset=None):
         dc_offset = sum(samples) / N       # estimate from buffer mean
     centered = [x - dc_offset for x in samples]
     return math.sqrt(sum(x**2 for x in centered) / N)
-for curve in IEC_CURVES:
-    print(curve, trip_time(2, 1.0, 1.0, curve))
-
-for curve in IEEE_CURVES:
-    print(curve, trip_time(5, 1.0, 1.0, curve))
