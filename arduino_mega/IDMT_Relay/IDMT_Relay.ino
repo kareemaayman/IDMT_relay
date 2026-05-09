@@ -46,7 +46,7 @@ float sensitivity = 0.85;
 /* ═══════════════════════════════════════════════════════════════
  *  Default relay settings
  * ═══════════════════════════════════════════════════════════════ */
-#define I_PICKUP_DEFAULT  0.5f      /* amps                               */
+#define I_PICKUP_DEFAULT  0.6f      /* amps                               */
 #define TMS_DEFAULT       0.5f
 #define INST_M_MIN        1.01f     /* minimum allowed inst multiple      */
 
@@ -78,6 +78,8 @@ float      trip_time_ms   = 0.0f;
 bool       protection_enabled = false;   /* protection starts only after user config */
 uint32_t   blink_counter  = 0;
 bool       red_led_on     = false;
+uint32_t   last_sample_ms = 0;           /* timestamp of last sampling window */
+uint32_t   trip_event_ms  = 0;           /* timestamp of actual trip event */
 
 /* Instantiate the Menu Library */
 RelayMenu relayMenu(user_standard, user_iec_curve, user_ieee_curve, user_tms, user_pickup, user_inst_multiple);
@@ -154,11 +156,17 @@ void run_protection(void)
         update_leds(relay_state);
         return;
     }
+    
+    uint32_t sample_start_ms = millis();
+    
     /* Collect one window of ADC samples */
     for (int i = 0; i < ADC_SAMPLES; i++) {
         adc_buf[i] = (uint16_t)analogRead(ADC_PIN);
         delayMicroseconds(200);
     }
+    
+    uint32_t sample_end_ms = millis();
+    float window_s = (float)(sample_end_ms - sample_start_ms) / 1000.0f;  /* actual elapsed time in seconds */
 
     float offset = 0.0f;
     float Vrms = calc_rms(adc_buf, ADC_SAMPLES, Vref, ADC_res, &offset);
@@ -184,9 +192,14 @@ void run_protection(void)
         if (M >= user_inst_multiple)
         {
             relay_state = RELAY_TRIPPED;
-            relayMenu.m_latched = true; 
-            digitalWrite(TRIP_PIN, LOW);
-            print_status_1f(F("INST_TRIP"), millis(), M);
+            relayMenu.m_latched = true;
+            trip_event_ms = millis();     /* CAPTURE TRIP TIME FIRST */
+            digitalWrite(TRIP_PIN, LOW);  /* TRIGGER IMMEDIATELY */
+            Serial.print(F("INST_TRIP t="));
+            Serial.print(trip_event_ms);
+            Serial.print(F(" M="));
+            Serial.print(M, 2);
+            Serial.print(F("\r\n"));
             update_leds(relay_state);
             return;
         }
@@ -205,39 +218,41 @@ void run_protection(void)
 
             case RELAY_FAULT_PENDING:
             {
-                float window_s = (float)ADC_SAMPLES * 200e-6f;  // one window ≈ 0.1 s
                 trip_fraction += window_s / t_trip;     
                 if (trip_fraction >= 1.0f){
                     relay_state = RELAY_TRIPPED;
                     relayMenu.m_latched = true;
-                    digitalWrite(TRIP_PIN, LOW);
-                    Serial.print(F("TRIP_EXECUTED\r\n"));
+                    trip_event_ms = millis();     /* CAPTURE TRIP TIME FIRST */
+                    digitalWrite(TRIP_PIN, LOW);  /* TRIGGER IMMEDIATELY */
+                    Serial.print(F("TRIP_EXECUTED t="));
+                    Serial.print(trip_event_ms);
+                    Serial.print(F(" elapsed="));
+                    Serial.print(trip_event_ms - fault_start_ms);
+                    Serial.print(F("ms theory="));
+                    Serial.print(t_trip, 3);
+                    Serial.print(F("s\r\n"));
                     update_leds(relay_state);
                 }
                 else
                 {
                     float remaining = (1.0f - trip_fraction) * t_trip;
-                    print_fault_pending(millis(), M, remaining, t_trip);
+                    Serial.print(F("FAULT t="));
+                    Serial.print(millis());
+                    Serial.print(F(" M="));
+                    Serial.print(M, 2);
+                    Serial.print(F(" Tremain="));
+                    Serial.print(remaining, 3);
+                    Serial.print(F("s\r\n"));
                 }
                 break;
-                // if ((millis() - fault_start_ms) >= (uint32_t)trip_time_ms)
-                // {
-                //     relay_state = RELAY_TRIPPED;
-                //     relayMenu.m_latched = true;
-                //     digitalWrite(TRIP_PIN, LOW);
-                //     Serial.print(F("TRIP_EXECUTED\r\n"));
-                // }
-                // else
-                // {
-                //     uint32_t elapsed_ms = millis() - fault_start_ms;
-                //     float remaining = (trip_time_ms - (float)elapsed_ms) / 1000.0f;
-                //     print_fault_pending(millis(), M, remaining);
-                // }
-                // break;
             }
 
             case RELAY_TRIPPED:
-                print_status_1f(F("TRIPPED"), millis(), M);
+                Serial.print(F("TRIPPED t="));
+                Serial.print(millis());
+                Serial.print(F(" M="));
+                Serial.print(M, 2);
+                Serial.print(F("\r\n"));
                 update_leds(relay_state);
                 break;
         }
@@ -253,7 +268,11 @@ void run_protection(void)
             }
             else if (!relayMenu.m_latched)
             {
-                print_status_1f(F("OK"), millis(), M);
+                Serial.print(F("OK t="));
+                Serial.print(millis());
+                Serial.print(F(" M="));
+                Serial.print(M, 2);
+                Serial.print(F("\r\n"));
                 update_leds(relay_state);
             }
             // if latched: do nothing, relay stays open
