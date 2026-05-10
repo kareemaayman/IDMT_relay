@@ -19,8 +19,8 @@
  * Key Mapping:
  *   1 = Standard (STD)   | 2 = Curve (CRV)
  *   3 = TMS              | 4 = Pickup (PIK)
- *   5 = Inst M (INS)     | * = Reset (RST)
- *   0 = Status (STS)     | . = Decimal point
+ *   5 = Inst M (INS)     | # = Reset (RST)
+ *   9 = Status (STS)     | * = Decimal point
  */
 
 #include <Arduino.h>
@@ -37,6 +37,7 @@
  * ═══════════════════════════════════════════════════════════════ */
 
 // I²C LCD: 20 columns, 4 rows, address 0x27 (adjust if needed)
+// line 2,3 are shifted 4 columns so they start at -4 instead of 0 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 // 4×3 Matrix Keypad
@@ -57,9 +58,9 @@ Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 // Hardware pins
 #define ADC_PIN          A0
 #define TRIP_PIN         7          // digital output → relay driver
-#define GREEN_LED_PIN    8
-#define YELLOW_LED_PIN   9
-#define RED_LED_PIN      10
+#define GREEN_LED_PIN    8          // Indicates normal operation (ON)
+#define YELLOW_LED_PIN   9          // Indicates fault pending
+#define RED_LED_PIN      10         // Indicates tripped state (Blinking)
 
 /* ═══════════════════════════════════════════════════════════════
  *  Calibration & ADC parameters
@@ -131,6 +132,7 @@ void setup()
 {
     // Initialize I²C LCD
     Wire.begin();
+    // lcd.begin(20, 4);
     lcd.init();
     lcd.backlight();
     lcd.clear();
@@ -156,12 +158,21 @@ void setup()
  * ═══════════════════════════════════════════════════════════════ */
 void loop()
 {
+    // Update blinking LED independently
+    if (relay_state == RELAY_TRIPPED) {
+        if ((millis() - blink_counter) >= 500) {
+            blink_counter = millis();
+            red_led_on = !red_led_on;
+            digitalWrite(RED_LED_PIN, red_led_on ? HIGH : LOW);
+        }
+    }
+    
     // Check for keypad input
     char key = keypad.getKey();
     
     if (key) {
-        // Check for START command (press '*' to start)
-        if (!protection_enabled && key == '*') {
+        // Check for START command (press '7' to start)
+        if (!protection_enabled && key == '7') {
             protection_enabled = true;
             lcd.clear();
             lcd.setCursor(0, 0);
@@ -172,7 +183,7 @@ void loop()
             lcdMenu.processInput(key);
         } else {
             // In protection mode, handle reset and status
-            if (key == '*') {
+            if (key == '#') {
                 // Show reset menu
                 lcdMenu.show_reset_menu();
                 // Wait for confirmation (1=yes, 2=no)
@@ -183,11 +194,11 @@ void loop()
                     if (confirmKey) {
                         if (confirmKey == '1') {
                             lcdMenu.m_latched = false;
-                            lcd.setCursor(0, 3);
+                            lcd.setCursor(-4, 3);
                             lcd.print("Latch reset      ");
                             delay(1000);
                         } else if (confirmKey == '2') {
-                            lcd.setCursor(0, 3);
+                            lcd.setCursor(-4, 3);
                             lcd.print("Latch remains   ");
                             delay(1000);
                         }
@@ -195,10 +206,38 @@ void loop()
                     }
                     delay(10);
                 }
-            } else if (key == '0') {
+            } else if (key == '9') {
                 // Show status info for 3 seconds
                 lcdMenu.show_status_menu();
-                delay(3000);
+                bool waiting = true;
+                uint32_t timeout = millis() + 3000;
+                while (waiting && millis() < timeout) {
+                    char statusKey = keypad.getKey();
+                    if (statusKey == '0') {
+                        waiting = false;
+                    }
+                    delay(10);
+                }
+            } else if (key == '7') {
+                // Enter menu editing mode — show main menu and allow editing
+                lcdMenu.show_main_menu();
+                bool editing = true;
+                uint32_t menu_timeout = millis() + 30000;  // 30 second timeout
+                while (editing && millis() < menu_timeout) {
+                    char menuKey = keypad.getKey();
+                    if (menuKey) {
+                        if (menuKey == '7') {
+                            // Press 7 again to exit menu and return to protection status
+                            editing = false;
+                        } else {
+                            // Process menu input (1-5 for settings, # for reset, 0 for status)
+                            lcdMenu.processInput(menuKey);
+                        }
+                    }
+                    delay(10);
+                }
+                // Return to protection status display
+                display_protection_status();
             }
         }
     }
@@ -335,7 +374,7 @@ void update_leds(RelayState state)
         case RELAY_TRIPPED:
             digitalWrite(GREEN_LED_PIN, LOW);
             digitalWrite(YELLOW_LED_PIN, LOW);
-            digitalWrite(RED_LED_PIN, HIGH);
+            // Red LED blinking is now handled in main loop
             break;
     }
 }
@@ -359,7 +398,7 @@ void display_protection_status(void)
     lcd.print("A M=");
     lcd.print(last_M, 2);
     
-    lcd.setCursor(0, 2);
+    lcd.setCursor(-4, 2);
     switch (relay_state) {
         case RELAY_NORMAL:
             lcd.print("Status: NORMAL");
@@ -372,8 +411,8 @@ void display_protection_status(void)
             break;
     }
     
-    lcd.setCursor(0, 3);
-    lcd.print("H=Reset L=Status");
+    lcd.setCursor(-4, 3);
+    lcd.print("#=RST,9=STS,7=MNU");
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -396,12 +435,12 @@ void display_relay_state(void)
         lcd.print("Status: TRIPPED");
     }
     
-    lcd.setCursor(0, 2);
+    lcd.setCursor(-4, 2);
     lcd.print("I=");
     lcd.print(last_current, 2);
     lcd.print("A M=");
     lcd.print(last_M, 2);
     
-    lcd.setCursor(0, 3);
-    lcd.print("H=Reset L=Status");
+    lcd.setCursor(-4, 3);
+    lcd.print("#=RST,9=STS,7=MNU");
 }

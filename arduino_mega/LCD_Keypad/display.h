@@ -37,9 +37,9 @@ public:
     // Public menu display functions (for protection mode)
     void show_reset_menu();
     void show_status_menu();
+    void show_main_menu();
 
 private:
-    void show_main_menu();
     void show_standard_menu();
     void show_curve_menu();
     void show_tms_menu();

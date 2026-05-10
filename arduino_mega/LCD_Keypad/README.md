@@ -69,10 +69,9 @@ Col1  Col2  Col3
 | **3** | TMS | Enter time dial (0.01-10) |
 | **4** | Pickup | Enter pickup current (A) |
 | **5** | Inst M | Enter instantaneous multiple (≥1.01) |
-| **\*** | Reset/Accept | Start protection OR reset latch OR confirm entry |
+| **\*** | Reset/Decimal | Start protection OR reset latch; decimal point during numeric entry |
 | **0** | Status | View relay status during protection |
-| **.** | Decimal | For numeric input |
-| **#** | Unused | Not programmed |
+| **#** | Accept | Confirm numeric entry |
 | **6-9** | Unused | Not programmed (for future expansion) |
 
 ---
@@ -106,8 +105,8 @@ Press any key to access menu functions:
 
 ### Numeric Entry (TMS, Pickup, Inst M)
 - Use keys: **1-9** and **0** for digits
-- Use **.** for decimal point
-- **\*** (press **\***): Confirm entry and return to main menu
+- Use **\*** for decimal point
+- Press **#** to confirm entry and return to main menu
 
 ### Reset Latch
 - **1**: YES - reset the latch, relay can trip again
