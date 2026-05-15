@@ -76,7 +76,7 @@ void LCDKeypadMenu::processInput(char c) {
                 else { break; }
             }
             delay(1000);
-            m_state = MENU_MAIN;
+            m_menu_state = MENU_MAIN;
             show_main_menu();
             break;
 
@@ -98,7 +98,7 @@ void LCDKeypadMenu::processInput(char c) {
                 }
                 delay(1000);
                 m_rx_index = 0;
-                m_state = MENU_MAIN;
+                m_menu_state = MENU_MAIN;
                 show_main_menu();
             } else if ((c >= '0' && c <= '9') || c == '*') {
                 if (c == '*') c = '.';
@@ -129,7 +129,7 @@ void LCDKeypadMenu::processInput(char c) {
                 }
                 delay(1000);
                 m_rx_index = 0;
-                m_state = MENU_MAIN;
+                m_menu_state = MENU_MAIN;
                 show_main_menu();
             } else if ((c >= '0' && c <= '9') || c == '*') {
                 if (c == '*') c = '.';
@@ -260,7 +260,7 @@ void LCDKeypadMenu::show_tms_menu() {
     m_lcd.print("Enter TMS (0.01-10)");
     m_lcd.setCursor(0, 1);
     m_lcd.print("Current: ");
-    m_lcd.print(m_tms, 2);
+    m_lcd.print(*m_state.tms, 2);
     m_lcd.setCursor(-4, 2);
     m_lcd.print("Use 0-9 and * ");
     m_lcd.setCursor(-4, 3);
@@ -273,7 +273,7 @@ void LCDKeypadMenu::show_pickup_menu() {
     m_lcd.print("Enter Pickup (A)");
     m_lcd.setCursor(0, 1);
     m_lcd.print("Current: ");
-    m_lcd.print(m_pickup, 2);
+    m_lcd.print(*m_state.pickup, 2);
     m_lcd.setCursor(-4, 2);
     m_lcd.print("Use 0-9 and * ");
     m_lcd.setCursor(-4, 3);
@@ -286,7 +286,7 @@ void LCDKeypadMenu::show_inst_multiple_menu() {
     m_lcd.print("Enter Inst M (>1.01)");
     m_lcd.setCursor(0, 1);
     m_lcd.print("Current: ");
-    m_lcd.print(m_inst_m, 2);
+    m_lcd.print(*m_state.inst_m, 2);
     m_lcd.setCursor(-4, 2);
     m_lcd.print("Use 0-9 and * ");
     m_lcd.setCursor(-4, 3);
@@ -309,13 +309,13 @@ void LCDKeypadMenu::show_status_menu() {
     m_lcd.clear();
     m_lcd.setCursor(0, 0);
     m_lcd.print("Latch: ");
-    m_lcd.print(m_latched ? "ACTIVE" : "CLEAR");
+    m_lcd.print(*m_state.latched ? "ACTIVE" : "CLEAR");
     m_lcd.setCursor(0, 1);
     m_lcd.print("Std: ");
-    m_lcd.print(m_std == STD_IEC ? "IEC" : "IEEE");
+    m_lcd.print(*m_state.std == STD_IEC ? "IEC" : "IEEE");
     m_lcd.setCursor(-4, 2);
     m_lcd.print("TMS: ");
-    m_lcd.print(m_tms, 2);
+    m_lcd.print(*m_state.tms, 2);
     m_lcd.setCursor(-4, 3);
     m_lcd.print("0=Back");
 }
