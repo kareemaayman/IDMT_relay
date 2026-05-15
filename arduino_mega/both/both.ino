@@ -24,6 +24,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <Keypad.h>
 #include "relay_curves.h"
+#include "relay_state.h"
 #include "display.h"
 #include "LCD.h"
 
@@ -99,6 +100,7 @@ RelayState relay_state    = RELAY_NORMAL;
 uint32_t   fault_start_ms = 0;
 float      trip_time_ms   = 0.0f;
 bool       protection_enabled = false;   /* protection starts only after user config */
+bool       shared_latch = false;         /* shared latch flag synchronized between menus */
 uint32_t   blink_counter  = 0;
 bool       red_led_on     = false;
 uint32_t   last_sample_ms = 0;           /* timestamp of last sampling window */
@@ -108,11 +110,14 @@ uint32_t   trip_event_ms  = 0;           /* timestamp of actual trip event */
 float      last_current   = 0.0f;
 float      last_M         = 0.0f;
 
-/* Instantiate the Menu Library */
-RelayMenu relayMenu(user_standard, user_iec_curve, user_ieee_curve, user_tms, user_pickup, user_inst_multiple);
+/* Create shared state for menu synchronization */
+RelaySharedState shared_state(protection_enabled, shared_latch, user_standard, user_iec_curve, 
+                              user_ieee_curve, user_tms, user_pickup, user_inst_multiple);
+
+/* Instantiate the Menu Library with shared state */
+RelayMenu relayMenu(shared_state);
 /* I²C LCD */
-LCDKeypadMenu lcdMenu(lcd, user_standard, user_iec_curve, user_ieee_curve, 
-                       user_tms, user_pickup, user_inst_multiple);
+LCDKeypadMenu lcdMenu(lcd, shared_state);
 
 /* ═══════════════════════════════════════════════════════════════
  *  Forward declarations
@@ -208,7 +213,7 @@ void loop()
                     char confirmKey = keypad.getKey();
                     if (confirmKey) {
                         if (confirmKey == '1') {
-                            lcdMenu.m_latched = false;
+                            shared_latch = false;
                             lcd.setCursor(-4, 3);
                             lcd.print("Latch reset      ");
                             delay(1000);
@@ -269,12 +274,12 @@ void loop()
 void run_protection(void)
 {
     /* If latched, hold relay open and wait for manual reset via menu or button */
-    if (relayMenu.m_latched) {
+    if (shared_latch) {
         digitalWrite(TRIP_PIN, LOW);     // ensure it stays open
         update_leds(relay_state);
         return;
     }
-    if (lcdMenu.m_latched) {
+    if (shared_latch) {
         digitalWrite(TRIP_PIN, LOW);
         update_leds(relay_state);
         display_relay_state();
@@ -316,8 +321,7 @@ void run_protection(void)
         if (M >= user_inst_multiple)
         {
             relay_state = RELAY_TRIPPED;
-            relayMenu.m_latched = true;
-            lcdMenu.m_latched = true;
+            shared_latch = true;
             trip_event_ms = millis();     /* CAPTURE TRIP TIME FIRST */
             digitalWrite(TRIP_PIN, LOW);  /* TRIGGER IMMEDIATELY */
             Serial.print(F("INST_TRIP t="));
@@ -348,8 +352,7 @@ void run_protection(void)
                 trip_fraction += window_s / t_trip;     
                 if (trip_fraction >= 1.0f){
                     relay_state = RELAY_TRIPPED;
-                    relayMenu.m_latched = true;
-                    lcdMenu.m_latched = true;
+                    shared_latch = true;
                     trip_event_ms = millis();     /* CAPTURE TRIP TIME FIRST */
                     digitalWrite(TRIP_PIN, LOW);  /* TRIGGER IMMEDIATELY */
                     Serial.print(F("TRIP_EXECUTED t="));
@@ -388,14 +391,14 @@ void run_protection(void)
     }
     else{
             // Fault cleared — but only reclose if NOT latched
-            if (relay_state != RELAY_NORMAL && !relayMenu.m_latched && !lcdMenu.m_latched) 
+            if (relay_state != RELAY_NORMAL && !shared_latch) 
             {
                 relay_state = RELAY_NORMAL;
                 digitalWrite(TRIP_PIN, HIGH);
                 Serial.print(F("FAULT_CLEARED\r\n"));
                 update_leds(relay_state);
             }
-            else if (!relayMenu.m_latched && !lcdMenu.m_latched)
+            else if (!shared_latch)
             {
                 Serial.print(F("OK t="));
                 Serial.print(millis());
@@ -531,7 +534,7 @@ void display_relay_state(void)
     lcd.print("RELAY STATE");
     
     lcd.setCursor(0, 1);
-    if (lcdMenu.m_latched) {
+    if (shared_latch) {
         lcd.print("Status: LATCHED");
     } else if (relay_state == RELAY_TRIPPED) {
         lcd.print("Status: TRIPPED");
