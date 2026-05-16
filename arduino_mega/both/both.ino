@@ -63,14 +63,14 @@ const float Vref = 5.0;        // Arduino reference voltage
 const float ADC_res = 1023.0;
 
 // 👉 Adjust this after calibration
-float sensitivity = 0.85;
+float sensitivity = 1.2;
 
 #define ADC_SAMPLES      500         /* samples per RMS window             */
 
 /* ═══════════════════════════════════════════════════════════════
  *  Default relay settings
  * ═══════════════════════════════════════════════════════════════ */
-#define I_PICKUP_DEFAULT  0.6f      /* amps                               */
+#define I_PICKUP_DEFAULT  0.5f      /* amps                               */
 #define TMS_DEFAULT       0.5f
 #define INST_M_MIN        1.01f     /* minimum allowed inst multiple      */
 
@@ -124,9 +124,9 @@ LCDKeypadMenu lcdMenu(lcd, shared_state);
  * ═══════════════════════════════════════════════════════════════ */
 void run_protection(void);
 void update_leds(RelayState state);
-static void print_status_1f(const __FlashStringHelper *label, uint32_t t, float M);
+//static void print_status_1f(const __FlashStringHelper *label, uint32_t t, float M);
 static void print_fault_start(uint32_t t, float M, float t_trip);
-static void print_fault_pending(uint32_t t, float M, float remaining, float t_trip);
+//static void print_fault_pending(uint32_t t, float M, float remaining, float t_trip);
 // for lcdMenu
 char getValidKeypress(void);
 void display_protection_status(void);
@@ -302,6 +302,8 @@ void run_protection(void)
 
     float I_fault = Vrms * sensitivity;
     float M       = I_fault / user_pickup;
+    last_current  = I_fault;  // Store for LCD display
+    last_M        = M;        // Store for LCD display
     Serial.print(F("DEBUG: I="));
     Serial.print(I_fault);
     Serial.print(F(" M="));
@@ -449,15 +451,15 @@ void update_leds(RelayState state)
     }
 }
 
-static void print_status_1f(const __FlashStringHelper *label, uint32_t t, float M)
-{
-    Serial.print(label);
-    Serial.print(F(" t="));
-    Serial.print(t);
-    Serial.print(F(" M="));
-    Serial.print(M, 2);
-    Serial.print(F("\r\n"));
-}
+// static void print_status_1f(const __FlashStringHelper *label, uint32_t t, float M)
+// {
+//     Serial.print(label);
+//     Serial.print(F(" t="));
+//     Serial.print(t);
+//     Serial.print(F(" M="));
+//     Serial.print(M, 2);
+//     Serial.print(F("\r\n"));
+// }
 
 static void print_fault_start(uint32_t t, float M, float t_trip)
 {
@@ -470,19 +472,19 @@ static void print_fault_start(uint32_t t, float M, float t_trip)
     Serial.print(F("s\r\n"));
 }
 
-static void print_fault_pending(uint32_t t, float M, float remaining, float t_trip)
-{
-    Serial.print(F("FAULT t="));
-    Serial.print(t);
-    Serial.print(F(" M="));
-    Serial.print(M, 2);
-    Serial.print(F(" Tremain="));
-    Serial.print(remaining, 3);
-    Serial.print(F("s\r\n"));
-    Serial.print(F("Ttrip_theory="));
-    Serial.print(t_trip, 3);
-    Serial.print(F("s\r\n"));
-}
+// static void print_fault_pending(uint32_t t, float M, float remaining, float t_trip)
+// {
+//     Serial.print(F("FAULT t="));
+//     Serial.print(t);
+//     Serial.print(F(" M="));
+//     Serial.print(M, 2);
+//     Serial.print(F(" Tremain="));
+//     Serial.print(remaining, 3);
+//     Serial.print(F("s\r\n"));
+//     Serial.print(F("Ttrip_theory="));
+//     Serial.print(t_trip, 3);
+//     Serial.print(F("s\r\n"));
+// }
 
 /* ═══════════════════════════════════════════════════════════════
  *  Display protection status on LCD
