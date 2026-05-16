@@ -39,14 +39,14 @@ const float Vref = 5.0;        // Arduino reference voltage
 const float ADC_res = 1023.0;
 
 // 👉 Adjust this after calibration
-float sensitivity = 0.85;
+float sensitivity = 1.2;        /* Amps per Vrms at ADC input (depends on CT ratio and burden resistor) */
 
 #define ADC_SAMPLES      500         /* samples per RMS window             */
 
 /* ═══════════════════════════════════════════════════════════════
  *  Default relay settings
  * ═══════════════════════════════════════════════════════════════ */
-#define I_PICKUP_DEFAULT  0.6f      /* amps                               */
+#define I_PICKUP_DEFAULT  0.5f      /* amps                               */
 #define TMS_DEFAULT       0.5f
 #define INST_M_MIN        1.01f     /* minimum allowed inst multiple      */
 

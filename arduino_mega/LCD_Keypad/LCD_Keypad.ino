@@ -67,13 +67,13 @@ Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
  * ═══════════════════════════════════════════════════════════════ */
 const float Vref = 5.0;        // Arduino reference voltage
 const float ADC_res = 1023.0;
-float sensitivity = 0.85;      // Adjust after calibration
+float sensitivity = 1.2;      // Adjust after calibration
 #define ADC_SAMPLES      500   // Samples per RMS window
 
 /* ═══════════════════════════════════════════════════════════════
  *  Default relay settings
  * ═══════════════════════════════════════════════════════════════ */
-#define I_PICKUP_DEFAULT  0.6f
+#define I_PICKUP_DEFAULT  0.5f
 #define TMS_DEFAULT       0.5f
 #define INST_M_MIN        1.01f
 
@@ -324,6 +324,7 @@ void run_protection(void)
                     update_leds(relay_state);
                     display_relay_state();
                 } else {
+                    //float remaining = (1.0f - trip_fraction) * t_trip;
                     display_protection_status();
                 }
                 break;
