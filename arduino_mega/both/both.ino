@@ -326,6 +326,7 @@ void run_protection(void)
             shared_latch = true;
             trip_event_ms = millis();     /* CAPTURE TRIP TIME FIRST */
             digitalWrite(TRIP_PIN, LOW);  /* TRIGGER IMMEDIATELY */
+            lcd.clear();
             Serial.print(F("INST_TRIP t="));
             Serial.print(trip_event_ms);
             Serial.print(F(" M="));
@@ -357,6 +358,7 @@ void run_protection(void)
                     shared_latch = true;
                     trip_event_ms = millis();     /* CAPTURE TRIP TIME FIRST */
                     digitalWrite(TRIP_PIN, LOW);  /* TRIGGER IMMEDIATELY */
+                    lcd.clear();
                     Serial.print(F("TRIP_EXECUTED t="));
                     Serial.print(trip_event_ms);
                     Serial.print(F(" elapsed="));
@@ -451,16 +453,6 @@ void update_leds(RelayState state)
     }
 }
 
-// static void print_status_1f(const __FlashStringHelper *label, uint32_t t, float M)
-// {
-//     Serial.print(label);
-//     Serial.print(F(" t="));
-//     Serial.print(t);
-//     Serial.print(F(" M="));
-//     Serial.print(M, 2);
-//     Serial.print(F("\r\n"));
-// }
-
 static void print_fault_start(uint32_t t, float M, float t_trip)
 {
     Serial.print(F("FAULT_START t="));
@@ -471,20 +463,6 @@ static void print_fault_start(uint32_t t, float M, float t_trip)
     Serial.print(t_trip, 3);
     Serial.print(F("s\r\n"));
 }
-
-// static void print_fault_pending(uint32_t t, float M, float remaining, float t_trip)
-// {
-//     Serial.print(F("FAULT t="));
-//     Serial.print(t);
-//     Serial.print(F(" M="));
-//     Serial.print(M, 2);
-//     Serial.print(F(" Tremain="));
-//     Serial.print(remaining, 3);
-//     Serial.print(F("s\r\n"));
-//     Serial.print(F("Ttrip_theory="));
-//     Serial.print(t_trip, 3);
-//     Serial.print(F("s\r\n"));
-// }
 
 /* ═══════════════════════════════════════════════════════════════
  *  Display protection status on LCD

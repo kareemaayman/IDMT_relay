@@ -1,0 +1,68 @@
+\doxysection{Relay\+Shared\+State Struct Reference}
+\label{struct_relay_shared_state}\index{RelaySharedState@{RelaySharedState}}
+
+
+{\ttfamily \+\#include $<$relay\+\_\+state.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\textbf{ Relay\+Shared\+State} (bool \&prot\+\_\+en, bool \&lat, Standard \&s, IEC\+\_\+\+Curve \&i, IEEE\+\_\+\+Curve \&ie, float \&t, float \&p, float \&im)
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\label{struct_relay_shared_state_af14bb0a85e6739b7f693840db5fe5702} 
+bool $\ast$ {\bfseries protection\+\_\+enabled}
+\item 
+\label{struct_relay_shared_state_a00d0f3404e0cd2af966f498354bac692} 
+bool $\ast$ {\bfseries latched}
+\item 
+\label{struct_relay_shared_state_a2c6a944f64fb9c10686bf40620032967} 
+Standard $\ast$ {\bfseries std}
+\item 
+\label{struct_relay_shared_state_a02d0b426962e7653459efa26d2636aea} 
+IEC\+\_\+\+Curve $\ast$ {\bfseries iec}
+\item 
+\label{struct_relay_shared_state_aba75c9c78f7917dd93d07c3657abca18} 
+IEEE\+\_\+\+Curve $\ast$ {\bfseries ieee}
+\item 
+\label{struct_relay_shared_state_af4de85665cd5020054e57e2cbed12ca4} 
+float $\ast$ {\bfseries tms}
+\item 
+\label{struct_relay_shared_state_a8719262488c5e02cd5b8583c386e0052} 
+float $\ast$ {\bfseries pickup}
+\item 
+\label{struct_relay_shared_state_a742d41e1c4cd9004f4b9bfa8c5be2109} 
+float $\ast$ {\bfseries inst\+\_\+m}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+═══════════════════════════════════════════════════════════════ \doxyref{RELAY\+\_\+\+STATE.\+H}{p.}{relay__state_8h_source} -\/ Shared State Structure for Menu Synchronization ═══════════════════════════════════════════════════════════════
+
+This structure allows both the Serial menu (\doxyref{Relay\+Menu}{p.}{class_relay_menu}) and the LCD keypad menu (\doxyref{LCDKeypad\+Menu}{p.}{class_l_c_d_keypad_menu}) to access and modify the same relay configuration parameters. By using pointers, changes made in one menu are immediately visible to the other.
+
+Prevents duplicate state and ensures consistency across interfaces. Shared state holder for both menu systems
+
+All members are pointers to global variables in both.\+ino. This allows both menus to access and modify the same values.
+
+protection\+\_\+enabled :\+ Pointer to flag controlling whether protection is active latched :\+ Pointer to latch flag (relay stuck open after trip)
+
+std :\+ Pointer to selected standard (IEC or IEEE) iec :\+ Pointer to selected IEC curve (if STD\+\_\+\+IEC is chosen) ieee :\+ Pointer to selected IEEE curve (if STD\+\_\+\+IEEE is chosen) tms :\+ Pointer to TMS/\+\+TDS value (0.\+01-\/10.\+0) pickup :\+ Pointer to pickup current in Amperes ($>$ 0) inst\+\_\+m :\+ Pointer to instantaneous multiple ($>$= 1.\+01) 
+
+\label{struct_relay_shared_state_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\index{RelaySharedState@{RelaySharedState}!RelaySharedState@{RelaySharedState}}
+\index{RelaySharedState@{RelaySharedState}!RelaySharedState@{RelaySharedState}}
+\doxysubsubsection{RelaySharedState()}
+{\footnotesize\ttfamily \label{struct_relay_shared_state_a9adb2f7bbfacc590017eda39fb78c01c} 
+Relay\+Shared\+State::\+\+Relay\+Shared\+State (\begin{DoxyParamCaption}\item[{bool \&}]{prot\+\_\+en}{, }\item[{bool \&}]{lat}{, }\item[{Standard \&}]{s}{, }\item[{IEC\+\_\+\+Curve \&}]{i}{, }\item[{IEEE\+\_\+\+Curve \&}]{ie}{, }\item[{float \&}]{t}{, }\item[{float \&}]{p}{, }\item[{float \&}]{im}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Constructor:\+ Initialize all pointers to reference global variables
+
+This ensures both menus share the same underlying data. 
+
+The documentation for this struct was generated from the following file:\+\begin{DoxyCompactItemize}
+\item 
+relay\+\_\+state.\+h\end{DoxyCompactItemize}

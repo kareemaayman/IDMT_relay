@@ -1,0 +1,144 @@
+\doxysection{relay\+\_\+curves.\+cpp File Reference}
+\label{relay__curves_8cpp}\index{relay\_curves.cpp@{relay\_curves.cpp}}
+
+
+IDMT Protection Curve Implementations.  
+
+
+{\ttfamily \+\#include "{}relay\+\_\+curves.\+h"{}}\newline
+{\ttfamily \+\#include $<$math.\+h$>$}\newline
+\doxysubsubsection*{Classes}
+\begin{DoxyCompactItemize}
+\item 
+struct \textbf{ IEC\+\_\+\+Params}
+\begin{DoxyCompactList}\small\item\em IEC 60255-\/3 curve parameter structure. \end{DoxyCompactList}\item 
+struct \textbf{ IEEE\+\_\+\+Params}
+\begin{DoxyCompactList}\small\item\em IEEE C37.\+112 curve parameter structure. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+float \textbf{ trip\+\_\+time\+\_\+iec} (float M, float TMS, float inst\+\_\+multiple, IEC\+\_\+\+Curve curve)
+\begin{DoxyCompactList}\small\item\em Calculate IEC 60255-\/3 trip time. \end{DoxyCompactList}\item 
+float \textbf{ trip\+\_\+time\+\_\+ieee} (float M, float TDS, float inst\+\_\+multiple, IEEE\+\_\+\+Curve curve)
+\begin{DoxyCompactList}\small\item\em Calculate IEEE C37.\+112 trip time. \end{DoxyCompactList}\item 
+float \textbf{ calc\+\_\+rms} (const uint16\+\_\+t $\ast$samples, int n, float Vref, float ADC\+\_\+res, float $\ast$out\+\_\+offset)
+\begin{DoxyCompactList}\small\item\em Calculate RMS voltage from ADC sample buffer. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+IDMT Protection Curve Implementations. 
+
+Implements IEC 60255-\/3 and IEEE C37.\+112 time-\/current characteristics (TCC).
+
+IEC Formula:\+ T = TMS $\ast$ k /\+ (M$^\wedge$α -\/ 1) IEEE Formula:\+ T = TDS $\ast$ [A/\+(M$^\wedge$p -\/ 1) + B]
+
+Where M = I /\+ I\+\_\+pickup (current multiplier) 
+
+\label{relay__curves_8cpp_doc-func-members}
+\doxysubsection{Function Documentation}
+\index{relay\_curves.cpp@{relay\_curves.cpp}!calc\_rms@{calc\_rms}}
+\index{calc\_rms@{calc\_rms}!relay\_curves.cpp@{relay\_curves.cpp}}
+\doxysubsubsection{calc\_rms()}
+{\footnotesize\ttfamily \label{relay__curves_8cpp_a881ef410c626e6c14e51aeddcef9d4e8} 
+float calc\+\_\+rms (\begin{DoxyParamCaption}\item[{const uint16\+\_\+t $\ast$}]{samples}{, }\item[{int}]{n}{, }\item[{float}]{Vref}{, }\item[{float}]{ADC\+\_\+res}{, }\item[{float $\ast$}]{out\+\_\+offset}{}\end{DoxyParamCaption})}
+
+
+
+Calculate RMS voltage from ADC sample buffer. 
+
+Three-\/step process:\+
+\begin{DoxyEnumerate}
+\item Measure DC offset (average value -\/ signals are biased to midpoint)
+\item Center each sample around zero
+\item Calculate RMS of centered (AC) signal
+\end{DoxyEnumerate}
+
+Works with any ADC bit width using Vref and ADC\+\_\+res parameters. Example:\+ Arduino Mega 2560 with 10-\/bit ADC (0-\/1023), Vref=5V, LSB≈4.88mV
+
+
+\begin{DoxyParams}{Parameters}
+{\em samples} & Pointer to array of ADC readings (uint16\+\_\+t) \\
+\hline
+{\em n} & Number of samples in array \\
+\hline
+{\em Vref} & ADC reference voltage (e.\+g., 5.\+0V for Arduino) \\
+\hline
+{\em ADC\+\_\+res} & ADC resolution max value (e.\+g., 1023 for 10-\/bit) \\
+\hline
+{\em out\+\_\+offset} & [out] Pointer to store measured DC offset in ADC counts. Pass NULL to skip storing offset.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+RMS voltage in Volts 
+\end{DoxyReturn}
+
+\begin{DoxyRetVals}{Return values}
+{\em -\/1.\+0f} & on error (null pointer or invalid n) \\
+\hline
+\end{DoxyRetVals}
+\index{relay\_curves.cpp@{relay\_curves.cpp}!trip\_time\_iec@{trip\_time\_iec}}
+\index{trip\_time\_iec@{trip\_time\_iec}!relay\_curves.cpp@{relay\_curves.cpp}}
+\doxysubsubsection{trip\_time\_iec()}
+{\footnotesize\ttfamily \label{relay__curves_8cpp_a068b093d918df748b5b617de72305673} 
+float trip\+\_\+time\+\_\+iec (\begin{DoxyParamCaption}\item[{float}]{M}{, }\item[{float}]{TMS}{, }\item[{float}]{inst\+\_\+multiple}{, }\item[{IEC\+\_\+\+Curve}]{curve}{}\end{DoxyParamCaption})}
+
+
+
+Calculate IEC 60255-\/3 trip time. 
+
+Uses formula:\+ T = TMS $\ast$ k /\+ (M$^\wedge$α -\/ 1)
+
+
+\begin{DoxyParams}{Parameters}
+{\em M} & Current multiplier (I /\+ I\+\_\+pickup) \\
+\hline
+{\em TMS} & Time Multiplier Setting (0.\+01 -\/ 10.\+0) \\
+\hline
+{\em inst\+\_\+multiple} & Instantaneous threshold multiplier \\
+\hline
+{\em curve} & IEC curve selection (SI, VI, EI, LTI)\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Trip time in seconds 
+\end{DoxyReturn}
+
+\begin{DoxyRetVals}{Return values}
+{\em RELAY\+\_\+\+INST\+\_\+\+ZONE} & if M $>$= inst\+\_\+multiple (instantaneous trip) \\
+\hline
+{\em RELAY\+\_\+\+ERR\+\_\+\+NO\+\_\+\+TRIP} & if M $<$= 1.\+0 (no overcurrent condition) \\
+\hline
+\end{DoxyRetVals}
+\index{relay\_curves.cpp@{relay\_curves.cpp}!trip\_time\_ieee@{trip\_time\_ieee}}
+\index{trip\_time\_ieee@{trip\_time\_ieee}!relay\_curves.cpp@{relay\_curves.cpp}}
+\doxysubsubsection{trip\_time\_ieee()}
+{\footnotesize\ttfamily \label{relay__curves_8cpp_a36be2e1a6a43bad0b89e183d61663060} 
+float trip\+\_\+time\+\_\+ieee (\begin{DoxyParamCaption}\item[{float}]{M}{, }\item[{float}]{TDS}{, }\item[{float}]{inst\+\_\+multiple}{, }\item[{IEEE\+\_\+\+Curve}]{curve}{}\end{DoxyParamCaption})}
+
+
+
+Calculate IEEE C37.\+112 trip time. 
+
+Uses formula:\+ T = TDS $\ast$ [A/\+(M$^\wedge$p -\/ 1) + B]
+
+
+\begin{DoxyParams}{Parameters}
+{\em M} & Current multiplier (I /\+ I\+\_\+pickup) \\
+\hline
+{\em TDS} & Time Dial Setting (0.\+01 -\/ 10.\+0) \\
+\hline
+{\em inst\+\_\+multiple} & Instantaneous threshold multiplier \\
+\hline
+{\em curve} & IEEE curve selection (MOD\+\_\+\+INV, VERY\+\_\+\+INV, EXT\+\_\+\+INV)\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Trip time in seconds 
+\end{DoxyReturn}
+
+\begin{DoxyRetVals}{Return values}
+{\em RELAY\+\_\+\+INST\+\_\+\+ZONE} & if M $>$= inst\+\_\+multiple (instantaneous trip) \\
+\hline
+{\em RELAY\+\_\+\+ERR\+\_\+\+NO\+\_\+\+TRIP} & if M $<$= 1.\+0 (no overcurrent condition) \\
+\hline
+\end{DoxyRetVals}

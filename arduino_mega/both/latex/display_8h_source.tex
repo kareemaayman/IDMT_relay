@@ -1,0 +1,40 @@
+\doxysection{display.\+h}
+\label{display_8h_source}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#ifndef\ DISPLAY\_H}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#define\ DISPLAY\_H}}
+\DoxyCodeLine{00003\ }
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ <Arduino.h>}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ "{}relay\_curves.h"{}}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ "{}relay\_types.h"{}}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ "{}relay\_state.h"{}}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \textcolor{keyword}{class\ }RelayMenu\ \{}
+\DoxyCodeLine{00030\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00036\ \ \ \ \ RelayMenu(RelaySharedState\&\ state);}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keywordtype}{void}\ init();}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keywordtype}{void}\ processInput(\textcolor{keywordtype}{char}\ c);}
+\DoxyCodeLine{00051\ \ \ \ \ }
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordtype}{bool}\&\ get\_latched()\ \{\ \textcolor{keywordflow}{return}\ *m\_state.latched;\ \}}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keywordtype}{void}\ show\_main\_menu();}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keywordtype}{void}\ show\_standard\_menu();}
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keywordtype}{void}\ show\_curve\_menu();}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keywordtype}{void}\ show\_tms\_menu();}
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keywordtype}{void}\ show\_pickup\_menu();}
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keywordtype}{void}\ show\_inst\_multiple\_menu();}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keywordtype}{void}\ show\_reset\_menu();}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \ \ \ \ RelaySharedState\&\ m\_state;\ \ \ \ \ \ }
+\DoxyCodeLine{00068\ \ \ \ \ MenuState\ m\_menu\_state;\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{keywordtype}{char}\ m\_rx\_buf[16];\ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00070\ \ \ \ \ uint8\_t\ m\_rx\_index;\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00071\ \};}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00073\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

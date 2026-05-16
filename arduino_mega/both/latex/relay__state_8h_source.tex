@@ -1,0 +1,33 @@
+\doxysection{relay\+\_\+state.\+h}
+\label{relay__state_8h_source}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#ifndef\ RELAY\_STATE\_H}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#define\ RELAY\_STATE\_H}}
+\DoxyCodeLine{00003\ }
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ <Arduino.h>}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ "{}relay\_types.h"{}}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ "{}relay\_curves.h"{}}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00037\ \textcolor{keyword}{struct\ }RelaySharedState\ \{}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{comment}{//\ Protection\ control\ flags}}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keywordtype}{bool}*\ protection\_enabled;\ \ \textcolor{comment}{/*\ Is\ protection\ system\ active?\ */}}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keywordtype}{bool}*\ latched;\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Is\ relay\ latched\ open\ (after\ trip)?\ */}}
+\DoxyCodeLine{00041\ \ \ \ \ }
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{comment}{//\ Settings\ (stored\ as\ pointers\ to\ global\ variables)}}
+\DoxyCodeLine{00043\ \ \ \ \ Standard*\ \ \ std;\ \ \ \ \ \ \ \textcolor{comment}{/*\ Protection\ standard:\ IEC\ or\ IEEE\ */}}
+\DoxyCodeLine{00044\ \ \ \ \ IEC\_Curve*\ \ iec;\ \ \ \ \ \ \ \textcolor{comment}{/*\ IEC\ curve\ selection\ (if\ IEC\ is\ chosen)\ */}}
+\DoxyCodeLine{00045\ \ \ \ \ IEEE\_Curve*\ ieee;\ \ \ \ \ \ \textcolor{comment}{/*\ IEEE\ curve\ selection\ (if\ IEEE\ is\ chosen)\ */}}
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordtype}{float}*\ \ \ \ \ \ tms;\ \ \ \ \ \ \ \textcolor{comment}{/*\ Time\ Multiplier\ Setting\ (0.01-\/10.0)\ */}}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keywordtype}{float}*\ \ \ \ \ \ pickup;\ \ \ \ \textcolor{comment}{/*\ Pickup\ current\ threshold\ (Amperes)\ */}}
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keywordtype}{float}*\ \ \ \ \ \ inst\_m;\ \ \ \ \textcolor{comment}{/*\ Instantaneous\ multiple\ (>=\ 1.01)\ */}}
+\DoxyCodeLine{00049\ \ \ \ \ }
+\DoxyCodeLine{00055\ \ \ \ \ RelaySharedState(\textcolor{keywordtype}{bool}\&\ prot\_en,\ \textcolor{keywordtype}{bool}\&\ lat,\ Standard\&\ s,\ IEC\_Curve\&\ i,\ }
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ IEEE\_Curve\&\ ie,\ \textcolor{keywordtype}{float}\&\ t,\ \textcolor{keywordtype}{float}\&\ p,\ \textcolor{keywordtype}{float}\&\ im)}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ :\ protection\_enabled(\&prot\_en),\ latched(\&lat),\ }
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ std(\&s),\ iec(\&i),\ ieee(\&ie),\ tms(\&t),\ pickup(\&p),\ inst\_m(\&im)\ \{\}}
+\DoxyCodeLine{00059\ \};}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

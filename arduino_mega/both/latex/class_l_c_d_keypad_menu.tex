@@ -1,0 +1,154 @@
+\doxysection{LCDKeypad\+Menu Class Reference}
+\label{class_l_c_d_keypad_menu}\index{LCDKeypadMenu@{LCDKeypadMenu}}
+
+
+{\ttfamily \+\#include $<$LCD.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\textbf{ LCDKeypad\+Menu} (Liquid\+Crystal\+\_\+\+I2C \&lcd, \textbf{ Relay\+Shared\+State} \&state)
+\item 
+void \textbf{ init} ()
+\item 
+void \textbf{ process\+Input} (char c)
+\item 
+bool \& \textbf{ get\+\_\+latched} ()
+\item 
+void \textbf{ show\+\_\+reset\+\_\+menu} ()
+\item 
+void \textbf{ show\+\_\+status\+\_\+menu} ()
+\item 
+void \textbf{ show\+\_\+main\+\_\+menu} ()
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+═══════════════════════════════════════════════════════════════════════════════ \doxyref{LCD.\+H}{p.}{_l_c_d_8h_source} -\/ Keypad \& LCD Menu Interface (I²C @ 0x27, 20x4 characters) ═══════════════════════════════════════════════════════════════════════════════
+
+\doxyref{LCDKeypad\+Menu}{p.}{class_l_c_d_keypad_menu} provides a hardware menu interface using a 4×3 matrix keypad and 20×4 I²C LCD display. This is the primary user interface for standalone operation (no PC connection needed).~\newline
+ $\ast$ Keypad Layout:\+ 1 2 3 Keys 1-\/5 :\+ Configure relay settings 4 5 6 Key 7 :\+ Toggle menu ↔ protection mode 7 8 9 Key 9 :\+ View status
+\begin{DoxyItemize}
+\item 0 \# Key 0 :\+ Go back Key \# :\+ Reset latch or confirm entry Key $\ast$ :\+ Enter decimal point during numeric entry
+\end{DoxyItemize}
+
+Features:\+
+\begin{DoxyItemize}
+\item Real-\/time LCD display updates
+\item Numeric entry with decimal support
+\item Input validation with error messages
+\item Protection mode status display during operation
+\end{DoxyItemize}
+
+Usage:\+
+\begin{DoxyEnumerate}
+\item Create instance:\+ \doxyref{LCDKeypad\+Menu}{p.}{class_l_c_d_keypad_menu} menu(lcd\+\_\+ref, shared\+\_\+state);~\newline
+ $\ast$ 2. Call \doxyref{init()}{p.}{class_l_c_d_keypad_menu_add0fac64aed2f38db62c1e39100c6efa} in setup()~\newline
+ $\ast$ 3. Call process\+Input(key) in loop() for each keypad press 
+\end{DoxyEnumerate}
+
+\label{class_l_c_d_keypad_menu_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\index{LCDKeypadMenu@{LCDKeypadMenu}!LCDKeypadMenu@{LCDKeypadMenu}}
+\index{LCDKeypadMenu@{LCDKeypadMenu}!LCDKeypadMenu@{LCDKeypadMenu}}
+\doxysubsubsection{LCDKeypadMenu()}
+{\footnotesize\ttfamily \label{class_l_c_d_keypad_menu_ac07205a7525f83c2339de75faf714fea} 
+LCDKeypad\+Menu::\+\+LCDKeypad\+Menu (\begin{DoxyParamCaption}\item[{Liquid\+Crystal\+\_\+\+I2C \&}]{lcd}{, }\item[{\textbf{ Relay\+Shared\+State} \&}]{state}{}\end{DoxyParamCaption})}
+
+Constructor:\+ Initialize with LCD reference and shared relay state
+
+
+\begin{DoxyParams}{Parameters}
+{\em lcd} & :\+ Reference to Liquid\+Crystal\+\_\+\+I2C object (I²C address 0x27)~\newline
+ $\ast$\\
+\hline
+{\em state} & :\+ \doxyref{Relay\+Shared\+State}{p.}{struct_relay_shared_state} reference (contains all relay settings)\\
+\hline
+\end{DoxyParams}
+\doxyref{LCDKeypad\+Menu}{p.}{class_l_c_d_keypad_menu} Constructor Initialize the menu state machine and input buffer
+
+
+\begin{DoxyParams}{Parameters}
+{\em lcd} & :\+ Reference to Liquid\+Crystal\+\_\+\+I2C object (I²C address 0x27)~\newline
+ $\ast$\\
+\hline
+{\em state} & :\+ \doxyref{Relay\+Shared\+State}{p.}{struct_relay_shared_state} reference \\
+\hline
+\end{DoxyParams}
+
+
+\label{class_l_c_d_keypad_menu_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\index{LCDKeypadMenu@{LCDKeypadMenu}!get\_latched@{get\_latched}}
+\index{get\_latched@{get\_latched}!LCDKeypadMenu@{LCDKeypadMenu}}
+\doxysubsubsection{get\_latched()}
+{\footnotesize\ttfamily \label{class_l_c_d_keypad_menu_aa478206d74e2485dee6d535d8767a030} 
+bool \& LCDKeypad\+Menu::\+get\+\_\+latched (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Accessor:\+ Get reference to latch flag from shared state \begin{DoxyReturn}{Returns}
+:\+ Reference to protection latch flag 
+\end{DoxyReturn}
+\index{LCDKeypadMenu@{LCDKeypadMenu}!init@{init}}
+\index{init@{init}!LCDKeypadMenu@{LCDKeypadMenu}}
+\doxysubsubsection{init()}
+{\footnotesize\ttfamily \label{class_l_c_d_keypad_menu_add0fac64aed2f38db62c1e39100c6efa} 
+void LCDKeypad\+Menu::\+init (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Display initial main menu Call this once in setup()
+
+Display initial menu upon startup Also enables LCD backlight Called once during setup() \index{LCDKeypadMenu@{LCDKeypadMenu}!processInput@{processInput}}
+\index{processInput@{processInput}!LCDKeypadMenu@{LCDKeypadMenu}}
+\doxysubsubsection{processInput()}
+{\footnotesize\ttfamily \label{class_l_c_d_keypad_menu_a0a3d7e9e87a5d03f46d63a4f02a25fe2} 
+void LCDKeypad\+Menu::\+process\+Input (\begin{DoxyParamCaption}\item[{char}]{c}{}\end{DoxyParamCaption})}
+
+Process a single keypad character Updates menu state and relay configuration based on key press
+
+
+\begin{DoxyParams}{Parameters}
+{\em c} & :\+ Character from keypad (\textquotesingle{}0\textquotesingle{}-\/\textquotesingle{}9\textquotesingle{}, \textquotesingle{}$\ast$\textquotesingle{}, \textquotesingle{}\#\textquotesingle{})\\
+\hline
+\end{DoxyParams}
+Process a single keypad character This is the main state machine dispatcher routing input to appropriate handlers
+
+Current menu state determines how character is interpreted:\+
+\begin{DoxyItemize}
+\item In MENU\+\_\+\+MAIN:\+ 1-\/5 for settings, \# for reset, 9 for status
+\item In other menus:\+ direct selection or numeric entry with \# to confirm
+\end{DoxyItemize}
+
+
+\begin{DoxyParams}{Parameters}
+{\em c} & :\+ Character from keypad (\textquotesingle{}0\textquotesingle{}-\/\textquotesingle{}9\textquotesingle{}, \textquotesingle{}$\ast$\textquotesingle{}, \textquotesingle{}\#\textquotesingle{}) \\
+\hline
+\end{DoxyParams}
+\index{LCDKeypadMenu@{LCDKeypadMenu}!show\_main\_menu@{show\_main\_menu}}
+\index{show\_main\_menu@{show\_main\_menu}!LCDKeypadMenu@{LCDKeypadMenu}}
+\doxysubsubsection{show\_main\_menu()}
+{\footnotesize\ttfamily \label{class_l_c_d_keypad_menu_a57a0fabf895a82223dee954b0239bfea} 
+void LCDKeypad\+Menu::\+show\+\_\+main\+\_\+menu (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Display main configuration menu
+
+Display main configuration menu with shortcuts Shows abbreviations for quick reference during protection setup \index{LCDKeypadMenu@{LCDKeypadMenu}!show\_reset\_menu@{show\_reset\_menu}}
+\index{show\_reset\_menu@{show\_reset\_menu}!LCDKeypadMenu@{LCDKeypadMenu}}
+\doxysubsubsection{show\_reset\_menu()}
+{\footnotesize\ttfamily \label{class_l_c_d_keypad_menu_a8dd1acb73e4f17bc34cd8b14f421f1d4} 
+void LCDKeypad\+Menu::\+show\+\_\+reset\+\_\+menu (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Public menu display functions (used during protection mode) Display reset confirmation menu
+
+Display reset latch confirmation menu User confirms whether to reset the relay latch after a trip event \index{LCDKeypadMenu@{LCDKeypadMenu}!show\_status\_menu@{show\_status\_menu}}
+\index{show\_status\_menu@{show\_status\_menu}!LCDKeypadMenu@{LCDKeypadMenu}}
+\doxysubsubsection{show\_status\_menu()}
+{\footnotesize\ttfamily \label{class_l_c_d_keypad_menu_a912b6d6406da65210118f40359bd9389} 
+void LCDKeypad\+Menu::\+show\+\_\+status\+\_\+menu (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Display current relay status
+
+Display relay status information Shows:\+ Latch status, protection standard, TMS value Press 0 to return to main menu 
+
+The documentation for this class was generated from the following files:\+\begin{DoxyCompactItemize}
+\item 
+LCD.\+h\item 
+LCD.\+cpp\end{DoxyCompactItemize}
